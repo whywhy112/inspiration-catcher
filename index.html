@@ -4,16 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>灵感捕手 V13.0 - 秩序与自由版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <script src="./libs/tailwind.js"></script>
+    <script src="./libs/confetti.min.js"></script>
+    
     <style>
-        :root { --bg-color: #f7f9fc; --bg-image: none; --bg-animation: none; }
-        body { background-color: var(--bg-color); background-image: var(--bg-image); background-size: 400% 400%; animation: var(--bg-animation); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #334155; transition: all 0.5s ease; -webkit-tap-highlight-color: transparent; overflow-x: hidden; min-height: 100vh; }
+        :root { --bg-color: #f7f9fc; --bg-image: none; --bg-animation: none; --theme-primary: #4f46e5; --theme-text: #334155; --theme-card: rgba(255, 255, 255, 0.65); --theme-item: rgba(255, 255, 255, 0.85); --theme-border: rgba(255, 255, 255, 0.8); --theme-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
+        body { background-color: var(--bg-color); background-image: var(--bg-image); background-size: 400% 400%; animation: var(--bg-animation); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--theme-text); transition: all 0.5s ease; -webkit-tap-highlight-color: transparent; overflow-x: hidden; min-height: 100vh; }
         body.theme-snow { --bg-color: #f8fafc; --bg-image: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); }
         body.theme-sunset { --bg-image: linear-gradient(-45deg, #ffecd2, #fcb69f, #ffecd2); --bg-animation: gradientBG 15s ease infinite; }
         body.theme-forest { --bg-image: linear-gradient(-45deg, #d4fc79, #96e6a1, #d4fc79); --bg-animation: gradientBG 15s ease infinite; }
         body.theme-aurora { --bg-image: linear-gradient(-45deg, #e0c3fc, #8ec5fc, #e0c3fc); --bg-animation: gradientBG 15s ease infinite; }
+        body.theme-v14-snow { --bg-color: #fafafa; --bg-image: linear-gradient(135deg, #ffffff 0%, #eef2ff 100%); --theme-primary: #4f46e5; --theme-text: #312e81; --theme-card: rgba(255, 255, 255, 0.88); --theme-item: rgba(255, 255, 255, 0.92); --theme-border: rgba(79, 70, 229, 0.12); --theme-shadow: 0 12px 30px -16px rgba(79, 70, 229, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.8); }
+        body.theme-v14-glass { --bg-color: #f5f3ff; --bg-image: linear-gradient(-45deg, #ede9fe, #c7d2fe, #e0e7ff, #ddd6fe); --theme-primary: #7c3aed; --theme-text: #3b0764; --theme-card: rgba(255, 255, 255, 0.48); --theme-item: rgba(255, 255, 255, 0.6); --theme-border: rgba(167, 139, 250, 0.28); --theme-shadow: 0 18px 48px -18px rgba(99, 102, 241, 0.42), inset 0 0 24px rgba(255, 255, 255, 0.28); }
+        body.theme-v14-ink { --bg-color: #0f172a; --bg-image: radial-gradient(circle at 25% 20%, #1e293b 0%, #0f172a 45%, #020617 100%); --theme-primary: #fbbf24; --theme-text: #e2e8f0; --theme-card: rgba(15, 23, 42, 0.82); --theme-item: rgba(30, 41, 59, 0.86); --theme-border: rgba(251, 191, 36, 0.24); --theme-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(251, 191, 36, 0.14); }
+        body.theme-v14-paper { --bg-color: #fdf6e3; --bg-image: linear-gradient(135deg, #fffdf5 0%, #fdf6e3 55%, #f5e8c8 100%); --theme-primary: #b58900; --theme-text: #4a3b1a; --theme-card: rgba(255, 252, 244, 0.88); --theme-item: rgba(255, 250, 235, 0.92); --theme-border: rgba(181, 137, 0, 0.18); --theme-shadow: 0 14px 34px -18px rgba(181, 137, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.7); }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
         body.pomodoro-mode { --bg-image: none !important; background-color: #f0fdf4 !important; }
@@ -21,9 +25,15 @@
         
         .cute-font { font-family: 'ZCOOL KuaiLe', cursive; }
         
-        .glass-card { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px); border-radius: 24px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.5); }
+        .glass-card { background: var(--theme-card); backdrop-filter: blur(20px); border-radius: 24px; box-shadow: var(--theme-shadow); color: var(--theme-text); }
         .universe-mode .glass-card { background: rgba(30, 41, 59, 0.7); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); color: white; }
-        .glass-item { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.8); }
+        .glass-item { background: var(--theme-item); backdrop-filter: blur(10px); border: 1px solid var(--theme-border); color: var(--theme-text); }
+
+        .theme-preview { min-height: 112px; justify-content: center; }
+        .theme-preview-visual { width: 100%; height: 54px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.7); box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.5); }
+        .theme-preview-line { stroke: var(--preview-primary); }
+        .theme-preview-dot { fill: var(--preview-primary); }
+        .theme-preview-glow { fill: var(--preview-primary); opacity: 0.35; }
         
         .btn-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
         .btn-hover:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
@@ -159,17 +169,17 @@
             <h2 class="text-xl font-bold text-slate-800 mb-6 cute-font">🎨 琉璃外观定制</h2>
             
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="applyTheme('theme-snow')" class="theme-btn py-4 rounded-2xl font-bold text-slate-700 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="background: linear-gradient(135deg, #fdfbfb, #ebedee);" data-theme="theme-snow">
-                    <span class="text-2xl">☁️</span><span class="text-xs">极简初雪</span>
+                <button onclick="applyTheme('theme-v14-snow')" class="theme-btn theme-preview py-3 rounded-2xl font-bold text-indigo-800 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="--preview-primary: #4f46e5;" data-theme="theme-v14-snow">
+                    <svg class="theme-preview-visual" viewBox="0 0 100 60" style="background: linear-gradient(135deg, #ffffff, #eef2ff);" aria-hidden="true"><line class="theme-preview-line" x1="18" y1="42" x2="82" y2="42" stroke-width="1.5" stroke-linecap="round" /><circle class="theme-preview-dot" cx="28" cy="18" r="2" /><circle class="theme-preview-dot" cx="68" cy="24" r="2" /></svg><span class="text-xs">雪原</span>
                 </button>
-                <button onclick="applyTheme('theme-sunset')" class="theme-btn py-4 rounded-2xl font-bold text-orange-800 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);" data-theme="theme-sunset">
-                    <span class="text-2xl">🌅</span><span class="text-xs">橘子海落日</span>
+                <button onclick="applyTheme('theme-v14-glass')" class="theme-btn theme-preview py-3 rounded-2xl font-bold text-violet-800 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="--preview-primary: #7c3aed;" data-theme="theme-v14-glass">
+                    <svg class="theme-preview-visual" viewBox="0 0 100 60" style="background: linear-gradient(-45deg, #ede9fe, #c7d2fe, #ddd6fe);" aria-hidden="true"><circle class="theme-preview-glow" cx="30" cy="22" r="12" /><circle class="theme-preview-glow" cx="68" cy="38" r="8" /><line class="theme-preview-line" x1="14" y1="44" x2="86" y2="44" stroke-width="1.5" stroke-linecap="round" /></svg><span class="text-xs">琉璃</span>
                 </button>
-                <button onclick="applyTheme('theme-forest')" class="theme-btn py-4 rounded-2xl font-bold text-green-800 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="background: linear-gradient(135deg, #d4fc79, #96e6a1);" data-theme="theme-forest">
-                    <span class="text-2xl">🍃</span><span class="text-xs">治愈森林</span>
+                <button onclick="applyTheme('theme-v14-ink')" class="theme-btn theme-preview py-3 rounded-2xl font-bold text-amber-100 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="--preview-primary: #fbbf24;" data-theme="theme-v14-ink">
+                    <svg class="theme-preview-visual" viewBox="0 0 100 60" style="background: radial-gradient(circle at 25% 20%, #1e293b 0%, #0f172a 60%, #020617 100%);" aria-hidden="true"><rect x="18" y="12" width="64" height="36" fill="none" class="theme-preview-line" stroke-width="1.5" /><circle class="theme-preview-dot" cx="70" cy="22" r="1.8" /><circle class="theme-preview-dot" cx="30" cy="28" r="1.8" /></svg><span class="text-xs">墨夜</span>
                 </button>
-                <button onclick="applyTheme('theme-aurora')" class="theme-btn py-4 rounded-2xl font-bold text-purple-800 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);" data-theme="theme-aurora">
-                    <span class="text-2xl">🌌</span><span class="text-xs">极光琉璃</span>
+                <button onclick="applyTheme('theme-v14-paper')" class="theme-btn theme-preview py-3 rounded-2xl font-bold text-amber-800 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex flex-col items-center gap-2" style="--preview-primary: #b58900;" data-theme="theme-v14-paper">
+                    <svg class="theme-preview-visual" viewBox="0 0 100 60" style="background: linear-gradient(135deg, #fffdf5, #fdf6e3, #f5e8c8);" aria-hidden="true"><path d="M20 42 Q38 30 50 39 T80 36" fill="none" class="theme-preview-line" stroke-width="1.5" stroke-linecap="round" /><circle class="theme-preview-dot" cx="32" cy="20" r="2" /><circle class="theme-preview-dot" cx="68" cy="22" r="2" /></svg><span class="text-xs">纸笺</span>
                 </button>
             </div>
         </div>
@@ -372,6 +382,7 @@
         <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto border border-white">
             <h2 class="text-2xl font-bold text-slate-800 mb-6 cute-font">⚙️ 设置与魔法配置</h2>
             <div class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 mb-6 shadow-inner"><h3 class="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2"><span>☁️</span> 跨设备同步 (匿名公共云)</h3><p class="text-[11px] text-indigo-600 mb-4 leading-relaxed font-medium">通过生成提取码，在任何设备无缝拉取记录。基于 npoint.io 免费服务，无密码，请勿上传极度隐私数据。</p><div class="flex flex-col gap-3"><div class="flex flex-col gap-2"><button onclick="cloudBackup()" id="cloud-upload-btn" class="w-full bg-indigo-500 text-white py-2.5 rounded-xl text-xs font-bold btn-hover shadow-md border border-indigo-400">⬆️ 备份并生成提取码</button><div id="sync-code-box" class="hidden bg-white border border-indigo-200 rounded-xl p-3 text-center shadow-inner"><span class="text-xs text-slate-500 block mb-1 font-bold">提取码：</span><span id="sync-code-display" class="text-xl font-mono font-bold text-indigo-600 select-all tracking-wider">------</span></div></div><div class="flex gap-2 mt-2 border-t border-indigo-100/50 pt-3"><input type="text" id="sync-code-input" placeholder="输入短号提取码" class="flex-1 bg-white border border-indigo-200 rounded-xl px-3 py-2 text-xs font-mono text-center outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner font-bold"><button onclick="cloudRestore()" id="cloud-download-btn" class="bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold btn-hover shadow-md whitespace-nowrap border border-blue-400">⬇️ 恢复</button></div></div></div>
+            <div class="glass-card p-4 mb-6"><h3 class="text-sm font-bold mb-2 flex items-center gap-2">💾 数据备份</h3><p class="text-[11px] mb-4 leading-relaxed font-medium opacity-80">把当前浏览器里的全部数据导出成 JSON 文件；导入会完整覆盖本机数据。</p><div class="flex gap-2"><button onclick="exportBackup()" id="backup-export-btn" class="flex-1 bg-indigo-500 text-white py-2.5 rounded-xl text-xs font-bold btn-hover shadow-md border border-indigo-400">⬇️ 导出 JSON 备份</button><button onclick="triggerBackupImport()" id="backup-import-btn" class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold btn-hover shadow-md border border-slate-700">⬆️ 导入 JSON 备份</button></div><input type="file" id="backup-import-input" accept=".json,application/json" class="hidden" onchange="importBackupFile(event)"></div>
             <div class="space-y-4"><h3 class="text-sm font-bold text-slate-700 flex items-center gap-2"><span>🤖</span> AI 魔法接口</h3><div><select id="api-provider" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 shadow-inner" onchange="changeProvider()"><option value="deepseek">DeepSeek (推荐)</option><option value="aliyun">阿里云通义</option><option value="openai">OpenAI</option><option value="custom">自定义</option></select></div><div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">API Base URL</label><input type="text" id="api-url-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-medium outline-none focus:border-indigo-400 mt-1 shadow-inner" placeholder="例如: https://api.deepseek.com/v1"></div><div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">API Key</label><input type="password" id="api-key-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-medium outline-none focus:border-indigo-400 mt-1 shadow-inner" placeholder="sk-..."></div><div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">模型名称 (Model)</label><input type="text" id="api-model-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-medium outline-none focus:border-indigo-400 mt-1 shadow-inner" placeholder="例如: deepseek-chat"></div></div>
             <div class="flex gap-3 mt-8"><button onclick="closeSettings()" class="flex-1 bg-slate-100 text-slate-600 border border-slate-200 py-3.5 rounded-xl text-sm font-bold btn-hover">关闭</button><button onclick="saveSettings()" class="flex-1 bg-slate-800 text-white py-3.5 rounded-xl text-sm font-bold btn-hover shadow-lg">保存设置</button></div>
         </div>
@@ -380,7 +391,8 @@
 
 <script>
     // --- 主题控制 ---
-    let currentVibeTheme = localStorage.getItem('vibeThemeV13') || 'theme-snow';
+    const VIBE_THEMES = ['theme-v14-snow', 'theme-v14-glass', 'theme-v14-ink', 'theme-v14-paper'];
+    let currentVibeTheme = localStorage.getItem('vibeThemeV14') || 'theme-v14-snow';
     document.body.className = currentVibeTheme;
     function openThemeModal() { document.getElementById('theme-modal').classList.remove('hidden'); document.getElementById('theme-modal').classList.add('flex'); highlightCurrentThemeBtn(); }
     function closeThemeModal() { document.getElementById('theme-modal').classList.add('hidden'); document.getElementById('theme-modal').classList.remove('flex'); }
@@ -391,22 +403,93 @@
         });
     }
     function applyTheme(themeName) {
-        document.body.classList.remove('theme-snow', 'theme-sunset', 'theme-forest', 'theme-aurora');
+        if (!VIBE_THEMES.includes(themeName)) return;
+        document.body.classList.remove(...VIBE_THEMES);
         document.body.classList.add(themeName);
         currentVibeTheme = themeName;
-        localStorage.setItem('vibeThemeV13', themeName);
+        localStorage.setItem('vibeThemeV14', themeName);
         highlightCurrentThemeBtn();
+    }
+
+    function buildBackupObject() {
+        const storageData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            storageData[key] = localStorage.getItem(key);
+        }
+        return {
+            formatVersion: 1,
+            app: 'inspiration-catcher',
+            appVersion: 'V13.0',
+            exportedAt: new Date().toISOString(),
+            inspirations,
+            aiConfig,
+            theme: currentVibeTheme,
+            localStorage: storageData
+        };
+    }
+
+    function exportBackup() {
+        const backup = buildBackupObject();
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `灵感捕手备份_${date}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function triggerBackupImport() {
+        document.getElementById('backup-import-input').click();
+    }
+
+    function importBackupFile(event) {
+        const input = event.target;
+        const file = input.files && input.files[0];
+        input.value = '';
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const backup = JSON.parse(String(reader.result));
+                if (!backup || typeof backup !== 'object' || Array.isArray(backup) || !backup.localStorage || typeof backup.localStorage !== 'object' || Array.isArray(backup.localStorage)) {
+                    alert('❌ 备份文件格式不正确');
+                    return;
+                }
+
+                const entries = Object.entries(backup.localStorage);
+                if (entries.length === 0 || entries.some(([, value]) => typeof value !== 'string')) {
+                    alert('❌ 备份文件没有可导入的数据');
+                    return;
+                }
+
+                if (!confirm('导入会覆盖当前所有数据，确定吗？')) return;
+                localStorage.clear();
+                entries.forEach(([key, value]) => localStorage.setItem(key, value));
+                window.location.reload();
+            } catch (error) {
+                alert('❌ JSON 解析失败，请确认这是导出的备份文件');
+            }
+        };
+        reader.onerror = () => alert('❌ 读取备份文件失败');
+        reader.readAsText(file, 'UTF-8');
     }
 
     // --- 【关键修复】极其稳定的免版权 MP3 音源 ---
     const RADIO_PLAYLIST = [
-        { title: "雨天发呆", artist: "Rain Ambience", url: "https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3" }, // 日
-        { title: "清晨森林鸟鸣", artist: "Forest Birds", url: "https://cdn.pixabay.com/audio/2022/02/07/audio_67828ce2eb.mp3" }, // 一
-        { title: "平静的海岸线", artist: "Ocean Waves", url: "https://cdn.pixabay.com/audio/2022/03/15/audio_2d0d00f64c.mp3" }, // 二
-        { title: "治愈系轻钢琴", artist: "Soft Piano", url: "https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3" }, // 三
-        { title: "深夜静谧白噪音", artist: "White Noise", url: "https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3" }, // 四
-        { title: "壁炉噼啪作响", artist: "Fireplace", url: "https://cdn.pixabay.com/audio/2022/02/22/audio_0cb34b5478.mp3" }, // 五
-        { title: "夜间虫鸣", artist: "Night Crickets", url: "https://cdn.pixabay.com/audio/2022/01/21/audio_145dcd5a89.mp3" }  // 六
+        { title: "雨天发呆", artist: "Rain Ambience", url: "./audio/rain.mp3" }, // 日
+        { title: "清晨森林鸟鸣", artist: "Forest Birds", url: "./audio/forest.mp3" }, // 一
+        { title: "平静的海岸线", artist: "Ocean Waves", url: "./audio/ocean.mp3" }, // 二
+        { title: "治愈系轻钢琴", artist: "Soft Piano", url: "./audio/piano.mp3" }, // 三
+        { title: "深夜静谧白噪音", artist: "White Noise", url: "./audio/white-noise.mp3" }, // 四
+        { title: "壁炉噼啪作响", artist: "Fireplace", url: "./audio/fireplace.mp3" }, // 五
+        { title: "夜间虫鸣", artist: "Night Crickets", url: "./audio/crickets.mp3" }  // 六
     ];
     let currentRadio = RADIO_PLAYLIST[new Date().getDay()];
 
