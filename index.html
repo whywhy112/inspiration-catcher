@@ -387,7 +387,7 @@
             <div id="draw-shake-results" class="w-full mt-6 flex flex-col gap-3"></div>
             <div id="draw-shake-actions" class="hidden flex gap-3 mt-5 w-full">
                 <button onclick="drawShake()" class="flex-1 btn-hover glass-item text-slate-600 py-3 rounded-xl font-bold text-sm shadow-sm">🔁 再来一次</button>
-                <button onclick="collectShakeGroup()" class="flex-1 btn-hover bg-amber-400 text-white py-3 rounded-xl font-bold text-sm shadow-md border border-amber-300">⭐ 收藏这组</button>
+                <button onclick="collectShakeGroup()" id="draw-collect-btn" class="flex-1 btn-hover bg-amber-400 text-white py-3 rounded-xl font-bold text-sm shadow-md border border-amber-300">⭐ 收藏这组</button>
             </div>
         </div>
     </div>
@@ -1610,6 +1610,8 @@
         document.getElementById('draw-panel-shake').style.display = wheelActive ? 'none' : 'flex';
         document.getElementById('draw-wheel-category').value = drawWheelCategory;
         buildWheel();
+        renderDrawChips();
+        renderDrawCountBtns();
     }
 
     function setDrawWheelCategory(category) {
@@ -1674,6 +1676,94 @@
         };
         wheel.addEventListener('transitionend', finish);
         setTimeout(finish, duration + 400);
+    }
+
+    // ================= 批次3：灵感抽卡（第二步：摇摇乐 + 收藏） =================
+    const DRAW_CATEGORY_EMOJI = { '颜色': '🎨', '材质': '🧵', '情绪': '💭', '场景': '🏙️', '物件': '🕯️', '天气': '🌦️', '动作': '🏃', '抽象': '♾️' };
+    let drawShakeCategories = new Set(); // 默认全不选
+    let drawShakeCount = 3;
+    let drawShaking = false;
+    let lastShakeGroup = [];
+    let drawCollections = JSON.parse(localStorage.getItem('drawCollectionsV14')) || [];
+    let drawToastTimer = null;
+
+    // fireConfetti 在旧代码里被调用了 4 次但一直没定义，在此补上实现（仅新增，不动旧调用点）
+    function fireConfetti() { if (typeof confetti === 'function') confetti({ particleCount: 130, spread: 78, origin: { y: 0.72 } }); }
+
+    function showToast(message, duration = 2000) {
+        const toast = document.getElementById('draw-toast');
+        toast.innerText = message;
+        toast.classList.add('show');
+        clearTimeout(drawToastTimer);
+        drawToastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    function saveDrawCollections() { localStorage.setItem('drawCollectionsV14', JSON.stringify(drawCollections)); markLocalChanged(); scheduleSyncPush(); }
+
+    function renderDrawChips() {
+        document.getElementById('draw-chip-row').innerHTML = DRAW_CATEGORY_NAMES.map(category => `<button onclick="toggleDrawCategory('${category}')" class="draw-chip ${drawShakeCategories.has(category) ? 'active' : ''}">${DRAW_CATEGORY_EMOJI[category]} ${category}</button>`).join('');
+    }
+
+    function toggleDrawCategory(category) {
+        if (drawShakeCategories.has(category)) drawShakeCategories.delete(category);
+        else drawShakeCategories.add(category);
+        renderDrawChips();
+    }
+
+    function setDrawShakeCount(count) { drawShakeCount = count; renderDrawCountBtns(); }
+
+    function renderDrawCountBtns() {
+        document.querySelectorAll('.draw-count-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.count) === drawShakeCount));
+    }
+
+    function resetDrawCollectBtn() {
+        const btn = document.getElementById('draw-collect-btn');
+        btn.disabled = false;
+        btn.innerHTML = '⭐ 收藏这组';
+        btn.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+
+    function drawShake() {
+        if (drawShaking) return;
+        const categories = [...drawShakeCategories];
+        if (!categories.length) { showToast('请至少选择一个类别'); return; }
+        const resultsBox = document.getElementById('draw-shake-results');
+        const actionsBox = document.getElementById('draw-shake-actions');
+        resultsBox.innerHTML = '';
+        actionsBox.style.display = 'none';
+        resetDrawCollectBtn();
+
+        let pool = [];
+        categories.forEach(category => getDrawElements(category).forEach(name => pool.push({ category, name })));
+        if (!pool.length) { showToast('选中的类别里没有元素'); return; }
+        for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+        const picks = pool.slice(0, Math.min(drawShakeCount, pool.length));
+        while (picks.length < drawShakeCount) picks.push(pool[Math.floor(Math.random() * pool.length)]);
+        lastShakeGroup = picks;
+
+        drawShaking = true;
+        picks.forEach((pick, index) => {
+            setTimeout(() => {
+                const card = document.createElement('div');
+                card.className = 'draw-card glass-item rounded-2xl p-4 flex items-center gap-3 shadow-sm';
+                card.innerHTML = `<span class="text-2xl drop-shadow-sm">${DRAW_CATEGORY_EMOJI[pick.category]}</span><div class="flex-1 min-w-0"><div class="text-lg font-bold truncate">${escapeDrawText(pick.name)}</div><div class="text-xs opacity-70 font-bold">${pick.category}</div></div>`;
+                resultsBox.appendChild(card);
+                if (index === picks.length - 1) setTimeout(() => { actionsBox.style.display = 'flex'; drawShaking = false; }, 350);
+            }, index * 300);
+        });
+    }
+
+    function collectShakeGroup() {
+        const btn = document.getElementById('draw-collect-btn');
+        if (btn.disabled) return;
+        if (!lastShakeGroup.length) { showToast('先摇一组再收藏'); return; }
+        drawCollections.push({ id: Date.now(), elements: lastShakeGroup.map(pick => ({ category: pick.category, name: pick.name })), created_at: Date.now() });
+        saveDrawCollections();
+        fireConfetti();
+        showToast('✨ 已收藏');
+        btn.disabled = true;
+        btn.innerHTML = '✅ 已收藏';
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
     }
 
     init();
