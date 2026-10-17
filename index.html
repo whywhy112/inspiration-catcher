@@ -94,7 +94,7 @@
 
         .draw-wheel-stage { --draw-wheel-size: min(74vw, 320px); position: relative; width: var(--draw-wheel-size); height: var(--draw-wheel-size); margin: 1.5rem auto 0.5rem; }
         .draw-wheel { width: 100%; height: 100%; border-radius: 50%; position: relative; box-shadow: 0 20px 44px -16px rgba(79, 70, 229, 0.4), inset 0 0 0 6px rgba(255, 255, 255, 0.85); transition-property: transform; transition-timing-function: cubic-bezier(0.12, 0.8, 0.08, 1); will-change: transform; }
-        .draw-wheel-label { position: absolute; left: 50%; top: 50%; font-size: 11px; font-weight: 700; color: #ffffff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); white-space: nowrap; letter-spacing: 1px; pointer-events: none; }
+        .draw-wheel-label { position: absolute; left: 50%; top: 50%; font-size: var(--draw-label-fs, 11px); font-weight: 700; color: #ffffff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); white-space: nowrap; letter-spacing: 1px; pointer-events: none; }
         .draw-wheel-pointer { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 22px solid var(--theme-primary); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25)); z-index: 5; }
         .draw-wheel-hub { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 54px; height: 54px; border-radius: 50%; background: var(--theme-item); border: 1px solid var(--theme-border); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18); z-index: 4; pointer-events: none; }
         .draw-wheel-result { min-height: 3.2rem; margin-top: 1.1rem; text-align: center; font-size: 2rem; font-weight: 800; color: var(--theme-primary); text-shadow: 0 2px 12px rgba(255, 255, 255, 0.6); }
@@ -349,20 +349,14 @@
                 <button onclick="switchDrawMode('wheel')" id="draw-tab-wheel" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all bg-indigo-500 shadow-md text-white">🎡 转盘</button>
                 <button onclick="switchDrawMode('shake')" id="draw-tab-shake" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800">🎲 摇摇乐</button>
             </div>
+            <button onclick="addCustomElements()" id="drawcard-custom-btn" class="glass-item hover:bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-sm font-bold btn-hover shadow-sm whitespace-nowrap">✏️ 自定义</button>
             <button onclick="aiExpandElements()" id="drawcard-ai-btn" class="glass-item hover:bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-sm font-bold btn-hover shadow-sm whitespace-nowrap">🤖 AI 扩充</button>
         </div>
 
         <!-- 转盘模式 -->
         <div id="draw-panel-wheel" class="w-full max-w-md mx-auto flex-col items-center" style="display:flex">
             <select id="draw-wheel-category" onchange="setDrawWheelCategory(this.value)" class="glass-item rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer mt-2">
-                <option value="颜色">🎨 颜色</option>
-                <option value="材质">🧵 材质</option>
-                <option value="情绪">💭 情绪</option>
-                <option value="场景">🏙️ 场景</option>
-                <option value="物件">🕯️ 物件</option>
-                <option value="天气">🌦️ 天气</option>
-                <option value="动作">🏃 动作</option>
-                <option value="抽象">♾️ 抽象</option>
+                <!-- 选项由 renderDrawCategoryOptions() 动态渲染：内置类别 + 自定义类别 + 创建新类别 -->
             </select>
             <div class="draw-wheel-stage">
                 <div class="draw-wheel-pointer"></div>
@@ -1566,17 +1560,86 @@
     }
 
     async function callLLM(systemPrompt, userPrompt) {
-        if(!aiConfig.key) { alert("请先去设置页面填写 API Key！"); openSettings(); return null; }
+        if(!aiConfig.key) { openSettings(); throw new Error('请先在设置页面填写 API Key！'); }
         const url = aiConfig.url.endsWith('/') ? aiConfig.url + 'chat/completions' : aiConfig.url + '/chat/completions';
-        try {
-            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiConfig.key}` }, body: JSON.stringify({ model: aiConfig.model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }) });
-            if(!res.ok) throw new Error("API 请求失败"); const data = await res.json(); return data.choices[0].message.content;
-        } catch(e) { alert("调用 AI 失败: " + e.message); return null; }
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiConfig.key}` }, body: JSON.stringify({ model: aiConfig.model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }) });
+        if(!res.ok) throw new Error('API 请求失败（HTTP ' + res.status + '）');
+        const data = await res.json();
+        if(!data.choices || !data.choices.length) throw new Error('API 返回内容为空或格式异常');
+        return data.choices[0].message.content;
     }
 
-    async function aiGenerateIdeas() { const btn = document.getElementById('ai-idea-btn'); btn.innerHTML = '<span class="ai-loading border-indigo-500 border-top-indigo-200"></span> 正在思考...'; btn.disabled = true; const prompt = "你是一个能提供治愈系灵感的精灵。直接输出3个适合普通人立刻去做的、25分钟内能完成的小事。极其简短。格式：\n1. xxx\n2. xxx\n3. xxx"; const reply = await callLLM(prompt, "给我3个灵感"); if(reply) { const items = reply.split('\n').map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(l => l); items.forEach(text => { inspirations.unshift({ id: Date.now() + Math.random(), text: text, tag: '💡 灵感点子', created_at: Date.now(), status: 'pending', image: null, color: CATEGORY_COLORS['💡 灵感点子'][Math.floor(Math.random()*5)].id }); }); saveData(); alert("🎉 成功为你捕获 3 个新灵感！"); } btn.innerHTML = '🤖 AI 塞个点子'; btn.disabled = false; }
-    async function aiPickForMe() { let pool = inspirations.filter(i => i.status === 'pending' && !i.tag.includes('秘密')); if(pool.length === 0) return alert("待办列表空空的！"); const btn = document.getElementById('ai-pick-btn'); btn.innerHTML = '<span class="ai-loading border-indigo-500 border-top-indigo-200"></span> AI 正在扫描列表...'; btn.disabled = true; const listStr = pool.map(i => `[ID:${i.id}] ${i.tag}: ${i.text}`).join('\n'); const prompt = "仔细阅读下面待办列表，挑选【1件】最推荐现在做的事情。直接返回格式：\n推荐ID: [填入ID]\n理由: [简短暖心的一句话理由]"; const reply = await callLLM(prompt, listStr); if(reply) { const matchId = reply.match(/ID:\s*(\d+(\.\d+)?)/); if(matchId) { const pickedItem = pool.find(i => i.id == matchId[1]) || pool[0]; const reason = reply.split('理由:')[1] || "很适合你现在的心情。"; showGachaResult(pickedItem, "🤖 AI 为你精选", `<strong>AI 说：</strong>${reason.trim()}<br><br><span class="text-slate-400">--- 原内容 ---</span><br>${pickedItem.text}`); } else { showGachaResult(pool[Math.floor(Math.random() * pool.length)], "🤖 AI 随手一抽"); } } btn.innerHTML = '🤖 犹豫不决？让 AI 读取列表为你挑一个'; btn.disabled = false; }
-    async function aiSummary() { const btn = document.getElementById('ai-summary-btn'); btn.innerHTML = '<span class="ai-loading"></span> 撰写中...'; btn.disabled = true; const todayItems = inspirations.filter(i => (Date.now() - i.created_at) < 86400000 && !i.tag.includes('秘密')); if(todayItems.length === 0) { btn.innerHTML = '<span>📝 生成今日 AI 星空总结</span>'; btn.disabled = false; return alert("今天还没有记录内容哦！"); } const listStr = todayItems.map(i => `[${i.status==='completed'?'已完成':'未完成'}] ${i.tag}: ${i.text}`).join('\n'); const prompt = "根据用户今天记录的内容，写一段不超过100字的温柔晚安总结，给予鼓励和情绪价值，格式优美。"; const reply = await callLLM(prompt, "今天的记录如下：\n" + listStr); if(reply) { document.getElementById('gacha-icon').innerText = '✨'; showGachaResult({tag:'AI 总结', text: ''}, "AI 星空手账", reply, false); } btn.innerHTML = '<span>📝 生成今日 AI 星空总结</span>'; btn.disabled = false; }
+    async function aiGenerateIdeas() {
+        const btn = document.getElementById('ai-idea-btn');
+        btn.innerHTML = '<span class="ai-loading border-indigo-500 border-top-indigo-200"></span> 正在思考...';
+        btn.disabled = true;
+        try {
+            const prompt = "你是一个能提供治愈系灵感的精灵。直接输出3个适合普通人立刻去做的、25分钟内能完成的小事。极其简短。格式：\n1. xxx\n2. xxx\n3. xxx";
+            const reply = await callLLM(prompt, "给我3个灵感");
+            if(reply) {
+                const items = reply.split('\n').map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(l => l);
+                items.forEach(text => { inspirations.unshift({ id: Date.now() + Math.random(), text: text, tag: '💡 灵感点子', created_at: Date.now(), status: 'pending', image: null, color: CATEGORY_COLORS['💡 灵感点子'][Math.floor(Math.random()*5)].id }); });
+                saveData();
+                alert("🎉 成功为你捕获 3 个新灵感！");
+            }
+        } catch(e) {
+            console.error('AI 塞点子出错:', e);
+            alert("调用 AI 失败: " + e.message);
+        } finally {
+            btn.innerHTML = '🤖 AI 塞个点子';
+            btn.disabled = false;
+        }
+    }
+    async function aiPickForMe() {
+        let pool = inspirations.filter(i => i.status === 'pending' && !i.tag.includes('秘密'));
+        if(pool.length === 0) return alert("待办列表空空的！");
+        const btn = document.getElementById('ai-pick-btn');
+        btn.innerHTML = '<span class="ai-loading border-indigo-500 border-top-indigo-200"></span> AI 正在扫描列表...';
+        btn.disabled = true;
+        try {
+            const listStr = pool.map(i => `[ID:${i.id}] ${i.tag}: ${i.text}`).join('\n');
+            const prompt = "仔细阅读下面待办列表，挑选【1件】最推荐现在做的事情。直接返回格式：\n推荐ID: [填入ID]\n理由: [简短暖心的一句话理由]";
+            const reply = await callLLM(prompt, listStr);
+            if(reply) {
+                const matchId = reply.match(/ID:\s*(\d+(\.\d+)?)/);
+                if(matchId) {
+                    const pickedItem = pool.find(i => i.id == matchId[1]) || pool[0];
+                    const reason = reply.split('理由:')[1] || "很适合你现在的心情。";
+                    showGachaResult(pickedItem, "🤖 AI 为你精选", `<strong>AI 说：</strong>${reason.trim()}<br><br><span class="text-slate-400">--- 原内容 ---</span><br>${pickedItem.text}`);
+                } else {
+                    showGachaResult(pool[Math.floor(Math.random() * pool.length)], "🤖 AI 随手一抽");
+                }
+            }
+        } catch(e) {
+            console.error('AI 挑选出错:', e);
+            alert("调用 AI 失败: " + e.message);
+        } finally {
+            btn.innerHTML = '🤖 犹豫不决？让 AI 读取列表为你挑一个';
+            btn.disabled = false;
+        }
+    }
+    async function aiSummary() {
+        const btn = document.getElementById('ai-summary-btn');
+        btn.innerHTML = '<span class="ai-loading"></span> 撰写中...';
+        btn.disabled = true;
+        try {
+            const todayItems = inspirations.filter(i => (Date.now() - i.created_at) < 86400000 && !i.tag.includes('秘密'));
+            if(todayItems.length === 0) { alert("今天还没有记录内容哦！"); return; }
+            const listStr = todayItems.map(i => `[${i.status==='completed'?'已完成':'未完成'}] ${i.tag}: ${i.text}`).join('\n');
+            const prompt = "根据用户今天记录的内容，写一段不超过100字的温柔晚安总结，给予鼓励和情绪价值，格式优美。";
+            const reply = await callLLM(prompt, "今天的记录如下：\n" + listStr);
+            if(reply) {
+                document.getElementById('gacha-icon').innerText = '✨';
+                showGachaResult({tag:'AI 总结', text: ''}, "AI 星空手账", reply, false);
+            }
+        } catch(e) {
+            console.error('AI 总结出错:', e);
+            alert("调用 AI 失败: " + e.message);
+        } finally {
+            btn.innerHTML = '<span>📝 生成今日 AI 星空总结</span>';
+            btn.disabled = false;
+        }
+    }
 
     // ================= 批次3：灵感抽卡（第一步：转盘模式） =================
     const ELEMENT_LIBRARY = {
@@ -1589,13 +1652,14 @@
         '动作': ['等待', '奔跑', '蜷缩', '凝视', '拥抱', '告别', '书写', '哼唱', '缝纫', '煮茶', '擦拭', '晾晒', '折叠', '点燃', '独行', '深呼吸'],
         '抽象': ['距离', '时间', '遗忘', '轮廓', '回音', '循环', '空隙', '片段', '谎言', '沉默', '边界', '折痕', '倒影', '影子', '契约', '摇篮曲']
     };
-    const DRAW_CATEGORY_NAMES = Object.keys(ELEMENT_LIBRARY);
+    const DRAW_CREATE_NEW = '__create_new_category__';
+    function getAllDrawCategories() { return [...new Set([...Object.keys(ELEMENT_LIBRARY), ...Object.keys(customElements)])]; }
     let drawcardMode = 'wheel';
     let drawWheelCategory = '颜色';
     let wheelRotation = 0;
     let wheelSpinning = false;
 
-    function getDrawElements(category) { return [...(ELEMENT_LIBRARY[category] || [])]; }
+    function getDrawElements(category) { return [...(ELEMENT_LIBRARY[category] || []), ...(customElements[category] || [])]; }
     function escapeDrawText(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
     function switchDrawMode(mode) { drawcardMode = mode; renderDrawcard(); }
@@ -1608,14 +1672,29 @@
         document.getElementById('draw-tab-shake').className = wheelActive ? idleCls : activeCls;
         document.getElementById('draw-panel-wheel').style.display = wheelActive ? 'flex' : 'none';
         document.getElementById('draw-panel-shake').style.display = wheelActive ? 'none' : 'flex';
-        document.getElementById('draw-wheel-category').value = drawWheelCategory;
+        renderDrawCategoryOptions();
         buildWheel();
         renderDrawChips();
         renderDrawCountBtns();
     }
 
+    function renderDrawCategoryOptions() {
+        const select = document.getElementById('draw-wheel-category');
+        const options = getAllDrawCategories().map(c => `<option value="${escapeDrawText(c).replace(/"/g, '&quot;')}">${DRAW_CATEGORY_EMOJI[c] || '✨'} ${escapeDrawText(c)}</option>`);
+        options.push(`<option value="${DRAW_CREATE_NEW}">➕ 创建新类别</option>`);
+        select.innerHTML = options.join('');
+        select.value = drawWheelCategory;
+    }
+
     function setDrawWheelCategory(category) {
+        if (category === DRAW_CREATE_NEW) {
+            const name = promptNewCategoryName();
+            if (!name) { renderDrawCategoryOptions(); return; }
+            if (!ELEMENT_LIBRARY[name] && !customElements[name]) { customElements[name] = []; saveCustomElements(); }
+            category = name;
+        }
         drawWheelCategory = category;
+        renderDrawCategoryOptions();
         wheelRotation = 0;
         wheelSpinning = false;
         const wheel = document.getElementById('draw-wheel');
@@ -1635,6 +1714,7 @@
         const elements = getDrawElements(drawWheelCategory);
         const count = elements.length;
         if (!count) { wheel.style.background = 'none'; wheel.innerHTML = ''; return; }
+        wheel.style.setProperty('--draw-label-fs', '11px');
         const slice = 360 / count;
         const stops = [];
         for (let i = 0; i < count; i++) stops.push(`${wheelSliceColor(i)} ${(i * slice).toFixed(3)}deg ${((i + 1) * slice).toFixed(3)}deg`);
@@ -1701,7 +1781,7 @@
     function saveDrawCollections() { localStorage.setItem('drawCollectionsV14', JSON.stringify(drawCollections)); markLocalChanged(); scheduleSyncPush(); }
 
     function renderDrawChips() {
-        document.getElementById('draw-chip-row').innerHTML = DRAW_CATEGORY_NAMES.map(category => `<button onclick="toggleDrawCategory('${category}')" class="draw-chip ${drawShakeCategories.has(category) ? 'active' : ''}">${DRAW_CATEGORY_EMOJI[category]} ${category}</button>`).join('');
+        document.getElementById('draw-chip-row').innerHTML = getAllDrawCategories().map(category => `<button onclick="toggleDrawCategory('${category}')" class="draw-chip ${drawShakeCategories.has(category) ? 'active' : ''}">${DRAW_CATEGORY_EMOJI[category] || '✨'} ${escapeDrawText(category)}</button>`).join('');
     }
 
     function toggleDrawCategory(category) {
@@ -1746,7 +1826,7 @@
             setTimeout(() => {
                 const card = document.createElement('div');
                 card.className = 'draw-card glass-item rounded-2xl p-4 flex items-center gap-3 shadow-sm';
-                card.innerHTML = `<span class="text-2xl drop-shadow-sm">${DRAW_CATEGORY_EMOJI[pick.category]}</span><div class="flex-1 min-w-0"><div class="text-lg font-bold truncate">${escapeDrawText(pick.name)}</div><div class="text-xs opacity-70 font-bold">${pick.category}</div></div>`;
+                card.innerHTML = `<span class="text-2xl drop-shadow-sm">${DRAW_CATEGORY_EMOJI[pick.category] || '✨'}</span><div class="flex-1 min-w-0"><div class="text-lg font-bold truncate">${escapeDrawText(pick.name)}</div><div class="text-xs opacity-70 font-bold">${pick.category}</div></div>`;
                 resultsBox.appendChild(card);
                 if (index === picks.length - 1) setTimeout(() => { actionsBox.style.display = 'flex'; drawShaking = false; }, 350);
             }, index * 300);
@@ -1764,6 +1844,108 @@
         btn.disabled = true;
         btn.innerHTML = '✅ 已收藏';
         btn.classList.add('opacity-60', 'cursor-not-allowed');
+    }
+
+    // ================= 批次3 第三步：AI 扩充 + 自定义元素 =================
+    // 结构：{ '颜色': ['暮山紫', ...], ... }；key 可以是内置类别名，也可以是用户自建类别名
+    let customElements = JSON.parse(localStorage.getItem('customElementsV14')) || {};
+
+    function saveCustomElements() { localStorage.setItem('customElementsV14', JSON.stringify(customElements)); markLocalChanged(); scheduleSyncPush(); }
+
+    // 弹窗让用户输入新类别名并做基础校验；返回合法名字，取消或非法返回 null
+    function promptNewCategoryName() {
+        const input = prompt('请输入新类别的名称，例如：梦境');
+        if (input === null) return null;
+        const name = input.trim();
+        if (!name) { showToast('类别名不能为空'); return null; }
+        if ([...name].length > 12) { showToast('类别名最多 12 个字符'); return null; }
+        if (/['"<>&\\`]/.test(name)) { showToast('类别名不能包含引号或特殊符号'); return null; }
+        return name;
+    }
+
+    // 确定要操作的类别：转盘模式用下拉框当前值；摇摇乐模式弹窗让用户选（内置 + 自定义类别，最后一项可创建新类别）
+    function resolveDrawTargetCategory() {
+        if (drawcardMode === 'wheel') return drawWheelCategory;
+        const names = getAllDrawCategories();
+        const menu = names.map((c, i) => `${i + 1}. ${DRAW_CATEGORY_EMOJI[c] || '✨'} ${c}`).join('\n');
+        const input = prompt(`要操作哪个类别？输入序号：\n${menu}\n${names.length + 1}. ➕ 创建新类别`);
+        if (input === null) return null;
+        const trimmed = input.trim();
+        if (names.includes(trimmed)) return trimmed;
+        const idx = parseInt(trimmed, 10);
+        if (idx === names.length + 1) return promptNewCategoryName();
+        if (idx >= 1 && idx <= names.length) return names[idx - 1];
+        showToast('序号无效');
+        return null;
+    }
+
+    function parseElementInput(text) {
+        return [...new Set(String(text).split(/[,，]/).map(s => s.trim()).filter(s => s))];
+    }
+
+    function addCustomElements() {
+        const category = resolveDrawTargetCategory();
+        if (!category) return;
+        const input = prompt(`请输入要加入【${category}】的新元素，用逗号分隔，例如：暴雨, 油纸伞`);
+        if (input === null) return;
+        const items = parseElementInput(input);
+        if (!items.length) { showToast('没有有效元素'); return; }
+        const existing = new Set(getDrawElements(category));
+        const fresh = items.filter(name => !existing.has(name));
+        if (!fresh.length) { showToast('元素已全部存在，没有新增'); return; }
+        customElements[category] = [...(customElements[category] || []), ...fresh];
+        saveCustomElements();
+        renderDrawcard();
+        showToast(`✅ 已添加 ${fresh.length} 个元素`);
+    }
+
+    // 清洗 AI 输出：去行首编号/符号/Markdown，去首尾引号括号，丢超 6 字的行，去重，最多 8 个
+    function cleanAiElementLines(reply, existingSet) {
+        const cleaned = [];
+        String(reply).split('\n').forEach(line => {
+            const text = line
+                .replace(/^\s*(?:[-*•·>#\s]+|\d+\s*[.、)）:：]\s*)/, '')
+                .replace(/[*_`#]/g, '')
+                .replace(/^["'“”‘’「」『』【】]+|["'“”‘’「」『』【】]+$/g, '')
+                .replace(/[\s:：;；,，.。]+$/g, '')
+                .trim();
+            if (!text || [...text].length > 6) return;
+            if (existingSet.has(text) || cleaned.includes(text)) return;
+            cleaned.push(text);
+        });
+        return cleaned.slice(0, 8);
+    }
+
+    async function aiExpandElements() {
+        console.log('AI 扩充被触发，当前配置:', aiConfig);
+        const btn = document.getElementById('drawcard-ai-btn');
+        btn.innerHTML = '⏳ 请求中...';
+        btn.disabled = true;
+        btn.classList.add('opacity-60');
+        try {
+            if (!aiConfig.key) { alert('请先在设置里填写 API Key'); openSettings(); return; }
+            const category = resolveDrawTargetCategory();
+            if (!category) return;
+            const existing = getDrawElements(category);
+            const systemPrompt = '你是一个灵感素材生成器。请严格按格式输出，不要解释，不要编号，不要 Markdown 标记。';
+            const userPrompt = `类别：${category}。已有元素：${existing.join('，')}。请生成 8 个不重复的新元素，每个不超过 6 个汉字。只输出 8 行，每行一个元素，不要空行。`;
+            console.log('准备向以下地址发送请求:', aiConfig.url, '模型:', aiConfig.model);
+            const reply = await callLLM(systemPrompt, userPrompt);
+            if (!reply) return;
+            const fresh = cleanAiElementLines(reply, new Set(existing));
+            if (!fresh.length) { showToast('AI 生成失败或内容重复，请重试'); return; }
+            customElements[category] = [...(customElements[category] || []), ...fresh];
+            saveCustomElements();
+            renderDrawcard();
+            showToast(`✨ AI 扩充了 ${fresh.length} 个元素`);
+        } catch (e) {
+            console.error('AI扩充出错:', e);
+            alert('生成失败：' + e.message);
+        } finally {
+            btn.innerHTML = '🤖 AI 扩充';
+            btn.disabled = false;
+            btn.classList.remove('opacity-60');
+        }
     }
 
     init();
