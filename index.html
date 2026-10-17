@@ -88,12 +88,34 @@
         .diary-book-page { background-color: rgba(255, 253, 245, 0.85); backdrop-filter: blur(10px); border-left: 12px solid rgba(226, 232, 240, 0.8); border-radius: 4px 16px 16px 4px; box-shadow: 2px 4px 15px rgba(0,0,0,0.05); position: relative; }
         .diary-tape { position: absolute; top: -10px; left: 50%; transform: translateX(-50%) rotate(-2deg); width: 60px; height: 24px; background: rgba(253, 230, 138, 0.8); backdrop-filter: blur(2px); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .book-date { font-family: 'ZCOOL KuaiLe', cursive; color: #94a3b8; font-size: 1.2rem; }
+        /* --- 批次3：灵感抽卡 --- */
+        .draw-toast { position: fixed; top: 1.25rem; left: 50%; transform: translateX(-50%) translateY(-10px); z-index: 90; padding: 0.6rem 1.25rem; border-radius: 999px; background: rgba(15, 23, 42, 0.88); color: #fff; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; box-shadow: 0 12px 30px -8px rgba(15, 23, 42, 0.45); backdrop-filter: blur(8px); opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; max-width: 86vw; text-align: center; }
+        .draw-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .draw-wheel-stage { --draw-wheel-size: min(74vw, 320px); position: relative; width: var(--draw-wheel-size); height: var(--draw-wheel-size); margin: 1.5rem auto 0.5rem; }
+        .draw-wheel { width: 100%; height: 100%; border-radius: 50%; position: relative; box-shadow: 0 20px 44px -16px rgba(79, 70, 229, 0.4), inset 0 0 0 6px rgba(255, 255, 255, 0.85); transition-property: transform; transition-timing-function: cubic-bezier(0.12, 0.8, 0.08, 1); will-change: transform; }
+        .draw-wheel-label { position: absolute; left: 50%; top: 50%; font-size: 11px; font-weight: 700; color: #ffffff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); white-space: nowrap; letter-spacing: 1px; pointer-events: none; }
+        .draw-wheel-pointer { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 22px solid var(--theme-primary); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25)); z-index: 5; }
+        .draw-wheel-hub { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 54px; height: 54px; border-radius: 50%; background: var(--theme-item); border: 1px solid var(--theme-border); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18); z-index: 4; pointer-events: none; }
+        .draw-wheel-result { min-height: 3.2rem; margin-top: 1.1rem; text-align: center; font-size: 2rem; font-weight: 800; color: var(--theme-primary); text-shadow: 0 2px 12px rgba(255, 255, 255, 0.6); }
+        .draw-wheel-result.pop { animation: drawResultPop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
+        @keyframes drawResultPop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        .draw-chip { padding: 0.5rem 1rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--theme-border); background: var(--theme-item); color: var(--theme-text); backdrop-filter: blur(10px); }
+        .draw-chip.active { background: var(--theme-primary); color: #fff; border-color: transparent; box-shadow: 0 8px 18px -8px var(--theme-primary); transform: translateY(-1px); }
+        .draw-count-btn { padding: 0.5rem 1.15rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--theme-border); background: var(--theme-item); color: var(--theme-text); }
+        .draw-count-btn.active { background: var(--theme-primary); color: #fff; border-color: transparent; box-shadow: 0 8px 18px -8px var(--theme-primary); }
+
+        .draw-card { opacity: 0; animation: drawCardIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards; }
+        @keyframes drawCardIn { 0% { opacity: 0; transform: translateY(24px) scale(0.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     </style>
 </head>
 <body class="theme-snow">
 
 <!-- 音频播放器，采用标准 MP3 格式，彻底解决苹果兼容问题 -->
 <audio id="bgm-player" loop crossorigin="anonymous" preload="auto"></audio>
+
+<div id="draw-toast" class="draw-toast"></div>
 
 <div class="app-container">
 
@@ -104,6 +126,7 @@
             <p class="text-slate-500 text-sm mb-6 font-medium">秩序与自由版</p>
             <div class="flex flex-col gap-3">
                 <button onclick="switchTab('home')" class="nav-btn-pc w-full py-3 rounded-xl bg-indigo-500 text-white font-bold btn-hover flex justify-center items-center gap-2 shadow-md" data-target="home">📝 捕捉与清单</button>
+                <button onclick="switchTab('drawcard')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="drawcard">🎨 抽卡</button>
                 <button onclick="switchTab('jar')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="jar">🫙 灵感摇摇罐</button>
                 <button onclick="switchTab('archive')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="archive">📖 时光日记本</button>
                 <button onclick="switchTab('universe')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="universe">🌌 记忆宇宙</button>
@@ -314,13 +337,69 @@
         </div>
     </div>
 
+    <!-- ================= 视图7：灵感抽卡 ================= -->
+    <div id="view-drawcard" class="view-section w-full relative z-10">
+        <div class="text-center mb-5 mt-6 md:mt-2">
+            <h1 class="text-3xl font-bold cute-font text-indigo-600 mb-2 drop-shadow-sm">🎨 灵感抽卡</h1>
+            <p class="text-slate-600 text-sm font-medium">转盘遇见缘分，摇摇碰撞火花</p>
+        </div>
+
+        <div class="flex items-center gap-2 max-w-md mx-auto w-full mb-2 px-1">
+            <div class="flex-1 bg-white/60 backdrop-blur-md p-1.5 rounded-xl flex shadow-sm border border-white/50">
+                <button onclick="switchDrawMode('wheel')" id="draw-tab-wheel" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all bg-indigo-500 shadow-md text-white">🎡 转盘</button>
+                <button onclick="switchDrawMode('shake')" id="draw-tab-shake" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800">🎲 摇摇乐</button>
+            </div>
+            <button onclick="aiExpandElements()" id="drawcard-ai-btn" class="glass-item hover:bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-sm font-bold btn-hover shadow-sm whitespace-nowrap">🤖 AI 扩充</button>
+        </div>
+
+        <!-- 转盘模式 -->
+        <div id="draw-panel-wheel" class="w-full max-w-md mx-auto flex-col items-center" style="display:flex">
+            <select id="draw-wheel-category" onchange="setDrawWheelCategory(this.value)" class="glass-item rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer mt-2">
+                <option value="颜色">🎨 颜色</option>
+                <option value="材质">🧵 材质</option>
+                <option value="情绪">💭 情绪</option>
+                <option value="场景">🏙️ 场景</option>
+                <option value="物件">🕯️ 物件</option>
+                <option value="天气">🌦️ 天气</option>
+                <option value="动作">🏃 动作</option>
+                <option value="抽象">♾️ 抽象</option>
+            </select>
+            <div class="draw-wheel-stage">
+                <div class="draw-wheel-pointer"></div>
+                <div id="draw-wheel" class="draw-wheel"></div>
+                <div class="draw-wheel-hub">🎯</div>
+            </div>
+            <button onclick="spinWheel()" id="draw-spin-btn" class="btn-hover bg-indigo-500 text-white px-10 py-3.5 rounded-2xl font-bold shadow-lg shadow-indigo-200 border border-indigo-400 text-base mt-2">🎯 转一下</button>
+            <div id="draw-wheel-result" class="draw-wheel-result cute-font"></div>
+        </div>
+
+        <!-- 摇摇乐模式 -->
+        <div id="draw-panel-shake" class="w-full max-w-md mx-auto flex-col items-center" style="display:none">
+            <p class="text-xs font-bold text-slate-500 mb-2 mt-2">选择类别（可多选）</p>
+            <div id="draw-chip-row" class="flex flex-wrap justify-center gap-2 mb-4"></div>
+            <div class="flex items-center gap-2 mb-5">
+                <span class="text-xs font-bold text-slate-500">数量</span>
+                <button class="draw-count-btn" data-count="1" onclick="setDrawShakeCount(1)">1 个</button>
+                <button class="draw-count-btn" data-count="3" onclick="setDrawShakeCount(3)">3 个</button>
+                <button class="draw-count-btn" data-count="5" onclick="setDrawShakeCount(5)">5 个</button>
+            </div>
+            <button onclick="drawShake()" class="btn-hover bg-indigo-500 text-white px-10 py-3.5 rounded-2xl font-bold shadow-lg shadow-indigo-200 border border-indigo-400 text-base">🎲 摇一摇</button>
+            <div id="draw-shake-results" class="w-full mt-6 flex flex-col gap-3"></div>
+            <div id="draw-shake-actions" class="hidden flex gap-3 mt-5 w-full">
+                <button onclick="drawShake()" class="flex-1 btn-hover glass-item text-slate-600 py-3 rounded-xl font-bold text-sm shadow-sm">🔁 再来一次</button>
+                <button onclick="collectShakeGroup()" class="flex-1 btn-hover bg-amber-400 text-white py-3 rounded-xl font-bold text-sm shadow-md border border-amber-300">⭐ 收藏这组</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 手机底部导航 -->
     <nav id="bottom-nav" class="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-white z-40 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)] md:hidden">
         <div class="flex justify-between px-2 py-1">
             <button onclick="switchTab('home')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="home"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">📝</span><span class="text-[10px] text-slate-600 font-bold">清单</span></button>
-            <button onclick="switchTab('jar')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="jar"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🫙</span><span class="text-[10px] text-slate-600 font-bold">抽卡</span></button>
+            <button onclick="switchTab('drawcard')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="drawcard"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🎨</span><span class="text-[10px] text-slate-600 font-bold">抽卡</span></button>
             <button onclick="switchTab('archive')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="archive"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">📖</span><span class="text-[10px] text-slate-600 font-bold">档案</span></button>
             <button onclick="switchTab('universe')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="universe"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🌌</span><span class="text-[10px] text-slate-600 font-bold">宇宙</span></button>
+            <button onclick="switchTab('jar')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="jar"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🫙</span><span class="text-[10px] text-slate-600 font-bold">摇摇罐</span></button>
         </div>
     </nav>
 
@@ -504,6 +583,7 @@
     const APP_OWNED_KEYS = [
         'inspirationsV13', 'inspirationsV12', 'aiConfigV13', 'aiConfigV12',
         'vibeThemeV14', 'vibeThemeV13', 'syncConfigV14', 'syncConfigV13',
+        'customElementsV14', 'drawCollectionsV14',
         'syncLocalChangedAtV14', '__syncPausedV14__'
     ];
     function clearAllData() {
@@ -974,6 +1054,7 @@
         if (tabId === 'universe') { document.body.classList.add('universe-mode'); renderUniverse(); }
         else if (tabId === 'archive') { document.body.classList.add('archive-mode'); renderArchive(); }
         else if (tabId === 'jar') { document.body.classList.add('jar-mode'); updateJarWater(); }
+        else if (tabId === 'drawcard') { renderDrawcard(); }
         else if (tabId === 'pomodoro' || tabId === 'free-pomodoro') { document.body.classList.add('pomodoro-mode'); }
         else { renderHome(); }
     }
@@ -1496,6 +1577,104 @@
     async function aiGenerateIdeas() { const btn = document.getElementById('ai-idea-btn'); btn.innerHTML = '<span class="ai-loading border-indigo-500 border-top-indigo-200"></span> 正在思考...'; btn.disabled = true; const prompt = "你是一个能提供治愈系灵感的精灵。直接输出3个适合普通人立刻去做的、25分钟内能完成的小事。极其简短。格式：\n1. xxx\n2. xxx\n3. xxx"; const reply = await callLLM(prompt, "给我3个灵感"); if(reply) { const items = reply.split('\n').map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(l => l); items.forEach(text => { inspirations.unshift({ id: Date.now() + Math.random(), text: text, tag: '💡 灵感点子', created_at: Date.now(), status: 'pending', image: null, color: CATEGORY_COLORS['💡 灵感点子'][Math.floor(Math.random()*5)].id }); }); saveData(); alert("🎉 成功为你捕获 3 个新灵感！"); } btn.innerHTML = '🤖 AI 塞个点子'; btn.disabled = false; }
     async function aiPickForMe() { let pool = inspirations.filter(i => i.status === 'pending' && !i.tag.includes('秘密')); if(pool.length === 0) return alert("待办列表空空的！"); const btn = document.getElementById('ai-pick-btn'); btn.innerHTML = '<span class="ai-loading border-indigo-500 border-top-indigo-200"></span> AI 正在扫描列表...'; btn.disabled = true; const listStr = pool.map(i => `[ID:${i.id}] ${i.tag}: ${i.text}`).join('\n'); const prompt = "仔细阅读下面待办列表，挑选【1件】最推荐现在做的事情。直接返回格式：\n推荐ID: [填入ID]\n理由: [简短暖心的一句话理由]"; const reply = await callLLM(prompt, listStr); if(reply) { const matchId = reply.match(/ID:\s*(\d+(\.\d+)?)/); if(matchId) { const pickedItem = pool.find(i => i.id == matchId[1]) || pool[0]; const reason = reply.split('理由:')[1] || "很适合你现在的心情。"; showGachaResult(pickedItem, "🤖 AI 为你精选", `<strong>AI 说：</strong>${reason.trim()}<br><br><span class="text-slate-400">--- 原内容 ---</span><br>${pickedItem.text}`); } else { showGachaResult(pool[Math.floor(Math.random() * pool.length)], "🤖 AI 随手一抽"); } } btn.innerHTML = '🤖 犹豫不决？让 AI 读取列表为你挑一个'; btn.disabled = false; }
     async function aiSummary() { const btn = document.getElementById('ai-summary-btn'); btn.innerHTML = '<span class="ai-loading"></span> 撰写中...'; btn.disabled = true; const todayItems = inspirations.filter(i => (Date.now() - i.created_at) < 86400000 && !i.tag.includes('秘密')); if(todayItems.length === 0) { btn.innerHTML = '<span>📝 生成今日 AI 星空总结</span>'; btn.disabled = false; return alert("今天还没有记录内容哦！"); } const listStr = todayItems.map(i => `[${i.status==='completed'?'已完成':'未完成'}] ${i.tag}: ${i.text}`).join('\n'); const prompt = "根据用户今天记录的内容，写一段不超过100字的温柔晚安总结，给予鼓励和情绪价值，格式优美。"; const reply = await callLLM(prompt, "今天的记录如下：\n" + listStr); if(reply) { document.getElementById('gacha-icon').innerText = '✨'; showGachaResult({tag:'AI 总结', text: ''}, "AI 星空手账", reply, false); } btn.innerHTML = '<span>📝 生成今日 AI 星空总结</span>'; btn.disabled = false; }
+
+    // ================= 批次3：灵感抽卡（第一步：转盘模式） =================
+    const ELEMENT_LIBRARY = {
+        '颜色': ['雾蓝', '锈红', '奶油白', '墨绿', '柠檬黄', '藕紫', '陶土棕', '烟灰', '暗金', '薄荷绿', '珊瑚粉', '靛青', '沙色', '炭黑', '酒红', '天青'],
+        '材质': ['玻璃', '毛线', '铁锈', '丝绸', '陶土', '皮革', '羽毛', '水晶', '纸张', '陶瓷', '木纹', '麻布', '液态金属', '冰', '灰烬', '珍珠'],
+        '情绪': ['缓慢', '焦躁', '温柔', '孤寂', '雀跃', '倦怠', '虔诚', '慵懒', '警觉', '惆怅', '狂喜', '平静', '暧昧', '凛冽', '怀念', '期待'],
+        '场景': ['雨夜', '旧书店', '无人车站', '清晨厨房', '废弃游乐场', '深夜便利店', '海边灯塔', '山间小屋', '地铁末班车', '温室', '天台', '教堂', '澡堂', '理发店', '图书馆', '天台花园'],
+        '物件': ['信封', '钥匙', '怀表', '镜子', '蜡烛', '雨伞', '磁带', '地图', '药瓶', '毛绒玩具', '信纸', '旧照片', '铃铛', '香水瓶', '纽扣', '风铃'],
+        '天气': ['细雨', '薄雾', '暴雪', '晴空', '阴云', '雷雨', '微风', '潮湿', '干燥', '冰雹', '彩虹', '晚霞', '晨露', '月晕', '焚风', '霜'],
+        '动作': ['等待', '奔跑', '蜷缩', '凝视', '拥抱', '告别', '书写', '哼唱', '缝纫', '煮茶', '擦拭', '晾晒', '折叠', '点燃', '独行', '深呼吸'],
+        '抽象': ['距离', '时间', '遗忘', '轮廓', '回音', '循环', '空隙', '片段', '谎言', '沉默', '边界', '折痕', '倒影', '影子', '契约', '摇篮曲']
+    };
+    const DRAW_CATEGORY_NAMES = Object.keys(ELEMENT_LIBRARY);
+    let drawcardMode = 'wheel';
+    let drawWheelCategory = '颜色';
+    let wheelRotation = 0;
+    let wheelSpinning = false;
+
+    function getDrawElements(category) { return [...(ELEMENT_LIBRARY[category] || [])]; }
+    function escapeDrawText(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    function switchDrawMode(mode) { drawcardMode = mode; renderDrawcard(); }
+
+    function renderDrawcard() {
+        const wheelActive = drawcardMode === 'wheel';
+        const activeCls = 'flex-1 py-2.5 rounded-lg text-sm font-bold transition-all bg-indigo-500 shadow-md text-white';
+        const idleCls = 'flex-1 py-2.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800';
+        document.getElementById('draw-tab-wheel').className = wheelActive ? activeCls : idleCls;
+        document.getElementById('draw-tab-shake').className = wheelActive ? idleCls : activeCls;
+        document.getElementById('draw-panel-wheel').style.display = wheelActive ? 'flex' : 'none';
+        document.getElementById('draw-panel-shake').style.display = wheelActive ? 'none' : 'flex';
+        document.getElementById('draw-wheel-category').value = drawWheelCategory;
+        buildWheel();
+    }
+
+    function setDrawWheelCategory(category) {
+        drawWheelCategory = category;
+        wheelRotation = 0;
+        wheelSpinning = false;
+        const wheel = document.getElementById('draw-wheel');
+        wheel.style.transitionDuration = '0s';
+        wheel.style.transform = 'rotate(0deg)';
+        document.getElementById('draw-wheel-result').innerText = '';
+        const btn = document.getElementById('draw-spin-btn');
+        btn.disabled = false;
+        btn.classList.remove('opacity-60');
+        buildWheel();
+    }
+
+    function wheelSliceColor(index) { return `hsl(${(index * 137.5) % 360}, 62%, ${index % 2 === 0 ? 70 : 78}%)`; }
+
+    function buildWheel() {
+        const wheel = document.getElementById('draw-wheel');
+        const elements = getDrawElements(drawWheelCategory);
+        const count = elements.length;
+        if (!count) { wheel.style.background = 'none'; wheel.innerHTML = ''; return; }
+        const slice = 360 / count;
+        const stops = [];
+        for (let i = 0; i < count; i++) stops.push(`${wheelSliceColor(i)} ${(i * slice).toFixed(3)}deg ${((i + 1) * slice).toFixed(3)}deg`);
+        wheel.style.background = `conic-gradient(${stops.join(', ')})`;
+        wheel.innerHTML = elements.map((name, i) => `<div class="draw-wheel-label" style="transform: translate(-50%, -50%) rotate(${(i * slice + slice / 2).toFixed(3)}deg) translateY(calc(var(--draw-wheel-size) * -0.33));">${escapeDrawText(name)}</div>`).join('');
+    }
+
+    function spinWheel() {
+        if (wheelSpinning) return;
+        const elements = getDrawElements(drawWheelCategory);
+        if (!elements.length) return;
+        wheelSpinning = true;
+        const btn = document.getElementById('draw-spin-btn');
+        btn.disabled = true;
+        btn.classList.add('opacity-60');
+        const resultEl = document.getElementById('draw-wheel-result');
+        resultEl.classList.remove('pop');
+        const count = elements.length;
+        const slice = 360 / count;
+        const targetIndex = Math.floor(Math.random() * count);
+        const targetAngle = targetIndex * slice + slice / 2;
+        const delta = ((360 - targetAngle - wheelRotation) % 360 + 360) % 360;
+        const fullSpins = 4 + Math.floor(Math.random() * 3);
+        wheelRotation += fullSpins * 360 + delta;
+        const duration = 3000 + Math.random() * 2000;
+        const wheel = document.getElementById('draw-wheel');
+        wheel.style.transitionDuration = `${duration}ms`;
+        wheel.style.transform = `rotate(${wheelRotation}deg)`;
+        let finished = false;
+        const finish = () => {
+            if (finished) return;
+            finished = true;
+            wheel.removeEventListener('transitionend', finish);
+            wheelSpinning = false;
+            btn.disabled = false;
+            btn.classList.remove('opacity-60');
+            resultEl.innerText = elements[targetIndex];
+            resultEl.classList.add('pop');
+        };
+        wheel.addEventListener('transitionend', finish);
+        setTimeout(finish, duration + 400);
+    }
 
     init();
 </script>
