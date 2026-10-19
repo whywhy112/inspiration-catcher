@@ -108,6 +108,24 @@
 
         .draw-card { opacity: 0; animation: drawCardIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards; }
         @keyframes drawCardIn { 0% { opacity: 0; transform: translateY(24px) scale(0.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
+        .tarot-scene { width: 220px; height: 340px; perspective: 1200px; }
+        .tarot-card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 1.2s cubic-bezier(0.35, 0.1, 0.2, 1); }
+        .tarot-card-inner.flipped { transform: rotateY(180deg); }
+        .tarot-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .tarot-back { background: radial-gradient(circle at 50% 38%, rgba(250, 204, 21, 0.18), transparent 55%), repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 14px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 14px), linear-gradient(160deg, #1e1b4b 0%, #312e81 55%, #0f172a 100%); border: 2px solid rgba(250, 204, 21, 0.55); box-shadow: inset 0 0 0 6px rgba(30, 27, 75, 0.9), inset 0 0 0 8px rgba(250, 204, 21, 0.35), 0 18px 40px -12px rgba(49, 46, 129, 0.6); }
+        .tarot-back-symbol { font-size: 3.2rem; color: rgba(250, 204, 21, 0.9); text-shadow: 0 0 22px rgba(250, 204, 21, 0.75); }
+        .tarot-front { transform: rotateY(180deg); background: linear-gradient(165deg, #fffbeb 0%, #fef3c7 55%, #fde68a 100%); border: 2px solid rgba(217, 119, 6, 0.5); box-shadow: inset 0 0 0 6px rgba(255, 251, 235, 0.9), inset 0 0 0 8px rgba(217, 119, 6, 0.3), 0 18px 40px -12px rgba(217, 119, 6, 0.45); padding: 1.25rem; text-align: center; gap: 0.45rem; }
+        .tarot-emoji { font-size: 4.2rem; line-height: 1.15; display: inline-block; transition: transform 0.4s ease; filter: drop-shadow(0 4px 10px rgba(120, 53, 15, 0.25)); }
+        .tarot-emoji.reversed { transform: rotate(180deg); }
+        .tarot-name { font-size: 1.5rem; font-weight: 800; color: #78350f; }
+        .tarot-orient { font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.7rem; border-radius: 999px; color: #fff; }
+        .tarot-orient.upright { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+        .tarot-orient.reversed { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+        .tarot-meaning { font-size: 0.82rem; font-weight: 700; color: #92400e; line-height: 1.6; }
     </style>
 </head>
 <body class="theme-snow">
@@ -127,6 +145,7 @@
             <div class="flex flex-col gap-3">
                 <button onclick="switchTab('home')" class="nav-btn-pc w-full py-3 rounded-xl bg-indigo-500 text-white font-bold btn-hover flex justify-center items-center gap-2 shadow-md" data-target="home">📝 捕捉与清单</button>
                 <button onclick="switchTab('drawcard')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="drawcard">🎨 抽卡</button>
+                <button onclick="switchTab('dailydraw')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="dailydraw">🔮 每日一抽</button>
                 <button onclick="switchTab('jar')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="jar">🫙 灵感摇摇罐</button>
                 <button onclick="switchTab('archive')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="archive">📖 时光日记本</button>
                 <button onclick="switchTab('universe')" class="nav-btn-pc w-full py-3 rounded-xl bg-white/60 text-slate-600 font-medium btn-hover flex justify-center items-center gap-2" data-target="universe">🌌 记忆宇宙</button>
@@ -387,6 +406,29 @@
         </div>
     </div>
 
+    <!-- 每日一抽 -->
+    <div id="view-dailydraw" class="view-section w-full relative z-10">
+        <div class="text-center mb-6 mt-6 md:mt-2">
+            <h1 class="text-3xl font-bold cute-font text-indigo-600 mb-2 drop-shadow-sm">🔮 每日一抽</h1>
+            <p class="text-slate-600 text-sm font-medium">心中默念今日或明日的期许</p>
+        </div>
+        <div class="flex-1 flex flex-col items-center justify-center gap-9 w-full max-w-md mx-auto py-4">
+            <div class="tarot-scene">
+                <div class="tarot-card-inner" id="tarot-card-inner">
+                    <div class="tarot-face tarot-back"><span class="tarot-back-symbol">✦</span></div>
+                    <div class="tarot-face tarot-front">
+                        <span class="tarot-orient upright" id="tarot-orient">正位</span>
+                        <span class="tarot-emoji" id="tarot-emoji">🃏</span>
+                        <div class="tarot-name cute-font" id="tarot-name">愚者</div>
+                        <div class="text-amber-600/70 text-xs tracking-[0.3em]">✦ ✦ ✦</div>
+                        <p class="tarot-meaning" id="tarot-meaning"></p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="drawDailyCard()" id="dailydraw-btn" class="btn-hover bg-indigo-500 text-white px-12 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 border border-indigo-400 text-lg">🔮 抽牌</button>
+        </div>
+    </div>
+
     <!-- 抽卡：管理自定义元素弹窗 -->
     <div id="draw-manage-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-4">
         <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 w-full max-w-sm shadow-2xl relative border border-white">
@@ -411,9 +453,10 @@
 
     <!-- 手机底部导航 -->
     <nav id="bottom-nav" class="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-white z-40 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)] md:hidden">
-        <div class="flex justify-between px-2 py-1">
+        <div class="flex justify-between px-2 py-1 overflow-x-auto no-scrollbar">
             <button onclick="switchTab('home')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="home"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">📝</span><span class="text-[10px] text-slate-600 font-bold">清单</span></button>
             <button onclick="switchTab('drawcard')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="drawcard"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🎨</span><span class="text-[10px] text-slate-600 font-bold">抽卡</span></button>
+            <button onclick="switchTab('dailydraw')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all min-w-[58px]" data-target="dailydraw"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🔮</span><span class="text-[10px] text-slate-600 font-bold">每日一抽</span></button>
             <button onclick="switchTab('archive')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="archive"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">📖</span><span class="text-[10px] text-slate-600 font-bold">档案</span></button>
             <button onclick="switchTab('universe')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="universe"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🌌</span><span class="text-[10px] text-slate-600 font-bold">宇宙</span></button>
             <button onclick="switchTab('jar')" class="nav-btn-mobile flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all" data-target="jar"><span class="text-2xl opacity-50 scale-90 transition-all drop-shadow-sm">🫙</span><span class="text-[10px] text-slate-600 font-bold">摇摇罐</span></button>
@@ -1073,7 +1116,62 @@
         else if (tabId === 'jar') { document.body.classList.add('jar-mode'); updateJarWater(); }
         else if (tabId === 'drawcard') { renderDrawcard(); }
         else if (tabId === 'pomodoro' || tabId === 'free-pomodoro') { document.body.classList.add('pomodoro-mode'); }
+        else if (tabId === 'dailydraw') { }
         else { renderHome(); }
+    }
+
+    // --- 每日一抽：22 张大阿卡纳塔罗牌 ---
+    const TAROT_DECK = [
+        { id: 0, name: '愚者', emoji: '🃏', upright: '新的开始、自由冒险、保持纯真', reversed: '鲁莽冲动、犹豫不决、方向不明' },
+        { id: 1, name: '魔术师', emoji: '🎩', upright: '创造力涌现、行动力满格、心想事成', reversed: '准备不足、意志分散、谨防欺骗' },
+        { id: 2, name: '女祭司', emoji: '🌙', upright: '相信直觉、内在智慧、静观其变', reversed: '忽略直觉、心浮气躁、秘密浮现' },
+        { id: 3, name: '皇后', emoji: '👑', upright: '丰盛富足、温柔滋养、感性与美', reversed: '过度依赖、创造力受阻、忽略自我' },
+        { id: 4, name: '皇帝', emoji: '🤴', upright: '秩序与掌控、稳固根基、值得信赖', reversed: '固执专断、局面失控、规则束缚' },
+        { id: 5, name: '教皇', emoji: '📿', upright: '传统智慧、贵人指引、循序渐进', reversed: '打破陈规、另辟蹊径、质疑权威' },
+        { id: 6, name: '恋人', emoji: '💞', upright: '爱与联结、真诚选择、心意相通', reversed: '关系失衡、价值冲突、难以抉择' },
+        { id: 7, name: '战车', emoji: '🏇', upright: '意志坚定、勇往直前、掌控全局', reversed: '方向迷失、动力不足、别硬撑' },
+        { id: 8, name: '力量', emoji: '🦁', upright: '温柔而坚定、勇气与耐心兼具', reversed: '自我怀疑、情绪波动、以柔克刚' },
+        { id: 9, name: '隐士', emoji: '🕯️', upright: '沉淀内省、独处充电、答案在心', reversed: '过度封闭、逃避人群、钻牛角尖' },
+        { id: 10, name: '命运之轮', emoji: '🎡', upright: '转机降临、顺势而为、好运轮转', reversed: '时运暂缓、抗拒改变、静待时机' },
+        { id: 11, name: '正义', emoji: '⚖️', upright: '公平公正、理性决断、因果清晰', reversed: '失衡偏颇、逃避责任、需要权衡' },
+        { id: 12, name: '倒吊人', emoji: '🙃', upright: '换个角度、暂停蓄力、甘愿付出', reversed: '无谓牺牲、停滞焦灼、学会放手' },
+        { id: 13, name: '死神', emoji: '💀', upright: '结束即新生、彻底告别、勇敢蜕变', reversed: '抗拒结束、拖延改变、旧事反复' },
+        { id: 14, name: '节制', emoji: '🏺', upright: '平衡调和、循序渐进、保持耐心', reversed: '失衡过度、急于求成、需要克制' },
+        { id: 15, name: '恶魔', emoji: '😈', upright: '直面欲望、觉察束缚、警惕执念', reversed: '挣脱枷锁、摆脱沉迷、重获自由' },
+        { id: 16, name: '高塔', emoji: '⚡', upright: '突变与觉醒、破旧才能立新', reversed: '避免崩坏、推迟的爆发、内部调整' },
+        { id: 17, name: '星星', emoji: '⭐', upright: '希望与疗愈、梦想照进现实', reversed: '信心受挫、暂时迷茫、别放弃' },
+        { id: 18, name: '月亮', emoji: '🌕', upright: '朦胧不安时、跟随直觉、接纳情绪', reversed: '迷雾散去、真相浮现、焦虑缓解' },
+        { id: 19, name: '太阳', emoji: '☀️', upright: '成功与活力、喜悦与光明自来', reversed: '短暂阴霾、勿过度乐观、补点自信' },
+        { id: 20, name: '审判', emoji: '🎺', upright: '觉醒召唤、复盘重生、重要决定', reversed: '自我怀疑、逃避过去、时机未到' },
+        { id: 21, name: '世界', emoji: '🌍', upright: '圆满达成、完整合一、新的征程', reversed: '差临门一脚、未竟之事、画好句号' }
+    ];
+
+    function drawDailyCard() {
+        const btn = document.getElementById('dailydraw-btn');
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const inner = document.getElementById('tarot-card-inner');
+        const revealCard = () => {
+            const card = TAROT_DECK[Math.floor(Math.random() * TAROT_DECK.length)];
+            const isReversed = Math.random() < 0.5;
+            document.getElementById('tarot-name').innerText = card.name;
+            const emojiEl = document.getElementById('tarot-emoji');
+            emojiEl.innerText = card.emoji;
+            emojiEl.classList.toggle('reversed', isReversed);
+            const orientEl = document.getElementById('tarot-orient');
+            orientEl.innerText = isReversed ? '逆位' : '正位';
+            orientEl.className = isReversed ? 'tarot-orient reversed' : 'tarot-orient upright';
+            document.getElementById('tarot-meaning').innerText = isReversed ? card.reversed : card.upright;
+            inner.classList.add('flipped');
+            btn.innerText = '🔮 重新抽牌';
+            setTimeout(() => { btn.disabled = false; }, 1300);
+        };
+        if (inner.classList.contains('flipped')) {
+            inner.classList.remove('flipped');
+            setTimeout(revealCard, 1250);
+        } else {
+            revealCard();
+        }
     }
 
     // --- 彻底解决音频兼容 ---
