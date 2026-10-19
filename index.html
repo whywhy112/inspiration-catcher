@@ -350,6 +350,7 @@
                 <button onclick="switchDrawMode('shake')" id="draw-tab-shake" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800">🎲 摇摇乐</button>
             </div>
             <button onclick="addCustomElements()" id="drawcard-custom-btn" class="glass-item hover:bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-sm font-bold btn-hover shadow-sm whitespace-nowrap">✏️ 自定义</button>
+            <button onclick="openManageModal()" id="drawcard-manage-btn" class="glass-item hover:bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-sm font-bold btn-hover shadow-sm whitespace-nowrap">⚙️ 管理</button>
             <button onclick="aiExpandElements()" id="drawcard-ai-btn" class="glass-item hover:bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-sm font-bold btn-hover shadow-sm whitespace-nowrap">🤖 AI 扩充</button>
         </div>
 
@@ -382,6 +383,28 @@
             <div id="draw-shake-actions" class="hidden flex gap-3 mt-5 w-full">
                 <button onclick="drawShake()" class="flex-1 btn-hover glass-item text-slate-600 py-3 rounded-xl font-bold text-sm shadow-sm">🔁 再来一次</button>
                 <button onclick="collectShakeGroup()" id="draw-collect-btn" class="flex-1 btn-hover bg-amber-400 text-white py-3 rounded-xl font-bold text-sm shadow-md border border-amber-300">⭐ 收藏这组</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 抽卡：管理自定义元素弹窗 -->
+    <div id="draw-manage-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 w-full max-w-sm shadow-2xl relative border border-white">
+            <button onclick="closeManageModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">✖</button>
+            <h2 class="text-lg font-bold text-slate-800 mb-1">⚙️ 管理自定义元素</h2>
+            <p id="draw-manage-category" class="text-xs font-bold text-indigo-500 mb-4"></p>
+            <div id="draw-manage-list" class="max-h-[50vh] overflow-y-auto flex flex-col gap-2"></div>
+        </div>
+    </div>
+
+    <!-- 抽卡：AI 生成结果确认弹窗 -->
+    <div id="draw-ai-preview-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 w-full max-w-sm shadow-2xl relative border border-white">
+            <h2 class="text-lg font-bold text-slate-800 mb-4 text-center">✨ AI 生成结果</h2>
+            <div id="draw-ai-preview-list" class="max-h-[50vh] overflow-y-auto flex flex-col gap-2 mb-5"></div>
+            <div class="flex gap-3">
+                <button onclick="closeAiPreviewModal()" class="flex-1 btn-hover glass-item text-slate-600 py-3 rounded-xl font-bold text-sm shadow-sm">取消</button>
+                <button onclick="confirmAiPreview()" class="flex-1 btn-hover bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm shadow-md border border-indigo-400">确认加入</button>
             </div>
         </div>
     </div>
@@ -1714,12 +1737,20 @@
         const elements = getDrawElements(drawWheelCategory);
         const count = elements.length;
         if (!count) { wheel.style.background = 'none'; wheel.innerHTML = ''; return; }
-        wheel.style.setProperty('--draw-label-fs', '11px');
+        const fontSize = count <= 16 ? 12 : count <= 24 ? 10 : count <= 32 ? 8 : 6;
+        wheel.style.setProperty('--draw-label-fs', fontSize + 'px');
         const slice = 360 / count;
         const stops = [];
         for (let i = 0; i < count; i++) stops.push(`${wheelSliceColor(i)} ${(i * slice).toFixed(3)}deg ${((i + 1) * slice).toFixed(3)}deg`);
         wheel.style.background = `conic-gradient(${stops.join(', ')})`;
-        wheel.innerHTML = elements.map((name, i) => `<div class="draw-wheel-label" style="transform: translate(-50%, -50%) rotate(${(i * slice + slice / 2).toFixed(3)}deg) translateY(calc(var(--draw-wheel-size) * -0.33));">${escapeDrawText(name)}</div>`).join('');
+        const wheelSize = wheel.clientWidth || 320;
+        const maxLabelWidth = 2 * (wheelSize * 0.33) * Math.tan(Math.PI / count) * 1.1;
+        wheel.innerHTML = elements.map((name, i) => {
+            const charCount = [...String(name)].length;
+            const textWidth = charCount * fontSize + Math.max(0, charCount - 1);
+            const hiddenStyle = textWidth > maxLabelWidth ? ' display: none;' : '';
+            return `<div class="draw-wheel-label" style="transform: translate(-50%, -50%) rotate(${(i * slice + slice / 2).toFixed(3)}deg) translateY(calc(var(--draw-wheel-size) * -0.33));${hiddenStyle}">${escapeDrawText(name)}</div>`;
+        }).join('');
     }
 
     function spinWheel() {
@@ -1803,6 +1834,11 @@
         btn.classList.remove('opacity-60', 'cursor-not-allowed');
     }
 
+    function shuffleDrawArray(list) {
+        for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+        return list;
+    }
+
     function drawShake() {
         if (drawShaking) return;
         const categories = [...drawShakeCategories];
@@ -1813,13 +1849,30 @@
         actionsBox.style.display = 'none';
         resetDrawCollectBtn();
 
-        let pool = [];
-        categories.forEach(category => getDrawElements(category).forEach(name => pool.push({ category, name })));
-        if (!pool.length) { showToast('选中的类别里没有元素'); return; }
-        for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-        const picks = pool.slice(0, Math.min(drawShakeCount, pool.length));
-        while (picks.length < drawShakeCount) picks.push(pool[Math.floor(Math.random() * pool.length)]);
+        // 公平轮询抽取：选中类别各自打乱成独立池子，空池子直接跳过
+        const pools = new Map();
+        categories.forEach(category => {
+            const elements = shuffleDrawArray(getDrawElements(category).map(name => ({ category, name })));
+            if (elements.length) pools.set(category, elements);
+        });
+        const totalAvailable = [...pools.values()].reduce((sum, list) => sum + list.length, 0);
+        if (!totalAvailable) { showToast('选中的类别里没有元素'); return; }
+
+        const target = Math.min(drawShakeCount, totalAvailable);
+        const picks = [];
+        if (target >= pools.size) {
+            // N >= K：第一轮每个类别各抽 1 个，保证都有代表
+            pools.forEach(list => picks.push(list.pop()));
+            // 第二轮：剩余元素混合打乱，随机抽满剩余名额
+            const rest = shuffleDrawArray([...pools.values()].flat());
+            while (picks.length < target && rest.length) picks.push(rest.pop());
+        } else {
+            // N < K：随机挑 N 个类别，各抽 1 个
+            shuffleDrawArray([...pools.keys()]).slice(0, target).forEach(category => picks.push(pools.get(category).pop()));
+        }
+        shuffleDrawArray(picks);
         lastShakeGroup = picks;
+        if (totalAvailable < drawShakeCount) showToast(`元素不足，已抽出全部 ${picks.length} 个`);
 
         drawShaking = true;
         picks.forEach((pick, index) => {
@@ -1924,20 +1977,22 @@
         btn.classList.add('opacity-60');
         try {
             if (!aiConfig.key) { alert('请先在设置里填写 API Key'); openSettings(); return; }
+            let requirement = prompt('请输入扩充要求（例如：关于海洋的5个词、只要3个词等）。留空则默认随机生成8个：');
+            if (requirement === null) {
+                return; // 用户点了取消，直接退出
+            }
             const category = resolveDrawTargetCategory();
             if (!category) return;
             const existing = getDrawElements(category);
             const systemPrompt = '你是一个灵感素材生成器。请严格按格式输出，不要解释，不要编号，不要 Markdown 标记。';
-            const userPrompt = `类别：${category}。已有元素：${existing.join('，')}。请生成 8 个不重复的新元素，每个不超过 6 个汉字。只输出 8 行，每行一个元素，不要空行。`;
+            const requirementText = requirement.trim() ? `扩充要求：${requirement.trim()}。` : '';
+            const userPrompt = `类别：${category}。已有元素：${existing.join('，')}。${requirementText}请生成 8 个不重复的新元素，每个不超过 6 个汉字。只输出 8 行，每行一个元素，不要空行。`;
             console.log('准备向以下地址发送请求:', aiConfig.url, '模型:', aiConfig.model);
             const reply = await callLLM(systemPrompt, userPrompt);
             if (!reply) return;
             const fresh = cleanAiElementLines(reply, new Set(existing));
             if (!fresh.length) { showToast('AI 生成失败或内容重复，请重试'); return; }
-            customElements[category] = [...(customElements[category] || []), ...fresh];
-            saveCustomElements();
-            renderDrawcard();
-            showToast(`✨ AI 扩充了 ${fresh.length} 个元素`);
+            openAiPreviewModal(category, fresh);
         } catch (e) {
             console.error('AI扩充出错:', e);
             alert('生成失败：' + e.message);
@@ -1946,6 +2001,72 @@
             btn.disabled = false;
             btn.classList.remove('opacity-60');
         }
+    }
+
+    // 管理自定义元素：只列出/删除 customElements 里的元素，内置元素不出现
+    let managingCategory = null;
+
+    function openManageModal() {
+        const category = resolveDrawTargetCategory();
+        if (!category) return;
+        managingCategory = category;
+        document.getElementById('draw-manage-category').innerText = `当前类别：${category}`;
+        renderManageList();
+        document.getElementById('draw-manage-modal').classList.remove('hidden');
+        document.getElementById('draw-manage-modal').classList.add('flex');
+    }
+
+    function closeManageModal() {
+        document.getElementById('draw-manage-modal').classList.add('hidden');
+        document.getElementById('draw-manage-modal').classList.remove('flex');
+        managingCategory = null;
+    }
+
+    function renderManageList() {
+        const list = document.getElementById('draw-manage-list');
+        const items = customElements[managingCategory] || [];
+        if (!items.length) { list.innerHTML = '<p class="text-sm text-slate-400 text-center py-6">该类别还没有自定义元素</p>'; return; }
+        list.innerHTML = items.map((name, index) => `<div class="flex items-center justify-between bg-white/70 border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm"><span class="text-sm font-bold text-slate-700">${escapeDrawText(name)}</span><button onclick="deleteCustomElement(${index})" class="btn-hover text-xs font-bold text-rose-500 bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-lg whitespace-nowrap">删除</button></div>`).join('');
+    }
+
+    function deleteCustomElement(index) {
+        if (!managingCategory) return;
+        const items = customElements[managingCategory] || [];
+        if (index < 0 || index >= items.length) return;
+        const removed = items.splice(index, 1)[0];
+        saveCustomElements();
+        renderDrawcard();
+        renderManageList();
+        showToast(`🗑️ 已删除「${removed}」`);
+    }
+
+    // AI 扩充预览确认：勾选后才写入 customElements
+    let aiPendingExpand = null;
+
+    function openAiPreviewModal(category, items) {
+        aiPendingExpand = { category, items };
+        document.getElementById('draw-ai-preview-list').innerHTML = items.map((name, index) => `<label class="flex items-center gap-3 bg-white/70 border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm cursor-pointer"><input type="checkbox" class="ai-preview-check accent-indigo-500 w-4 h-4" data-index="${index}" checked><span class="text-sm font-bold text-slate-700">${escapeDrawText(name)}</span></label>`).join('');
+        document.getElementById('draw-ai-preview-modal').classList.remove('hidden');
+        document.getElementById('draw-ai-preview-modal').classList.add('flex');
+    }
+
+    function closeAiPreviewModal() {
+        document.getElementById('draw-ai-preview-modal').classList.add('hidden');
+        document.getElementById('draw-ai-preview-modal').classList.remove('flex');
+        aiPendingExpand = null;
+    }
+
+    function confirmAiPreview() {
+        if (!aiPendingExpand) { closeAiPreviewModal(); return; }
+        const category = aiPendingExpand.category;
+        const items = aiPendingExpand.items;
+        const picked = [...document.querySelectorAll('#draw-ai-preview-list .ai-preview-check:checked')].map(box => items[Number(box.dataset.index)]);
+        if (!picked.length) { showToast('没有勾选任何元素'); return; }
+        customElements[category] = [...(customElements[category] || []), ...picked];
+        saveCustomElements();
+        renderDrawcard();
+        closeAiPreviewModal();
+        showToast(`✨ 已加入 ${picked.length} 个元素`);
     }
 
     init();
