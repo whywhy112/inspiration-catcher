@@ -126,6 +126,11 @@
         .tarot-orient.upright { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
         .tarot-orient.reversed { background: linear-gradient(135deg, #f59e0b, #ef4444); }
         .tarot-meaning { font-size: 0.82rem; font-weight: 700; color: #92400e; line-height: 1.6; }
+        .dailydraw-cal-cell { aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 0.7rem; font-size: 0.72rem; font-weight: 700; color: var(--theme-text); background: var(--theme-item); border: 1px solid var(--theme-border); }
+        button.dailydraw-cal-cell { cursor: pointer; transition: all 0.2s ease; }
+        button.dailydraw-cal-cell:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px var(--theme-primary); }
+        .dailydraw-cal-cell.selected { border-color: var(--theme-primary); box-shadow: 0 0 0 1px var(--theme-primary); }
+        .dailydraw-cal-emoji { font-size: 0.9rem; line-height: 1; }
     </style>
 </head>
 <body class="theme-snow">
@@ -411,8 +416,12 @@
         <div class="text-center mb-6 mt-6 md:mt-2">
             <h1 class="text-3xl font-bold cute-font text-indigo-600 mb-2 drop-shadow-sm">🔮 每日一抽</h1>
             <p class="text-slate-600 text-sm font-medium">心中默念今日或明日的期许</p>
+            <div class="flex gap-2 justify-center mt-4">
+                <button id="dailydraw-tab-draw" onclick="switchDailyDrawTab('draw')" class="draw-count-btn active">🔮 抽牌</button>
+                <button id="dailydraw-tab-history" onclick="switchDailyDrawTab('history')" class="draw-count-btn">📜 历史</button>
+            </div>
         </div>
-        <div class="flex-1 flex flex-col items-center justify-center gap-9 w-full max-w-md mx-auto py-4">
+        <div id="dailydraw-draw-area" class="flex-1 flex flex-col items-center justify-center gap-9 w-full max-w-md mx-auto py-4">
             <div class="tarot-scene">
                 <div class="tarot-card-inner" id="tarot-card-inner">
                     <div class="tarot-face tarot-back"><span class="tarot-back-symbol">✦</span></div>
@@ -426,6 +435,87 @@
                 </div>
             </div>
             <button onclick="drawDailyCard()" id="dailydraw-btn" class="btn-hover bg-indigo-500 text-white px-12 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 border border-indigo-400 text-lg">🔮 抽牌</button>
+            <button onclick="openManualDrawModal()" class="btn-hover bg-transparent text-indigo-400 hover:text-indigo-500 text-xs font-bold underline underline-offset-4 decoration-indigo-200 transition-colors -mt-5">✏️ 我抽了实体牌</button>
+            <div id="dailydraw-record-panel" class="hidden w-full flex-col gap-4 glass-item rounded-3xl p-5 shadow-md -mt-5">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-500">记录给</span>
+                    <div class="flex gap-2">
+                        <button class="draw-count-btn dailydraw-target-btn active" data-label="今天" onclick="setDailyDrawTarget('今天')">今天</button>
+                        <button class="draw-count-btn dailydraw-target-btn" data-label="明天" onclick="setDailyDrawTarget('明天')">明天</button>
+                        <button class="draw-count-btn dailydraw-target-btn" data-label="后天" onclick="setDailyDrawTarget('后天')">后天</button>
+                    </div>
+                </div>
+                <textarea id="dailydraw-note" rows="3" placeholder="此时没有感触也没关系，以后随时来补充~" oninput="onDailyDrawNoteInput()" class="w-full bg-white/70 border border-indigo-100 rounded-2xl p-3 text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"></textarea>
+                <div class="flex gap-2 justify-center flex-wrap">
+                    <button class="draw-count-btn dailydraw-mood-btn" data-mood="touched" onclick="setDailyDrawMood('touched')">✨ 有感触</button>
+                    <button class="draw-count-btn dailydraw-mood-btn" data-mood="plain" onclick="setDailyDrawMood('plain')">😐 平平</button>
+                    <button class="draw-count-btn dailydraw-mood-btn" data-mood="pending" onclick="setDailyDrawMood('pending')">⏳ 待验证</button>
+                </div>
+                <button onclick="saveDailyDrawRecord()" id="dailydraw-save-btn" class="btn-hover bg-amber-400 text-white w-full py-3.5 rounded-2xl font-bold shadow-md border border-amber-300 text-base">📝 保存感悟</button>
+            </div>
+        </div>
+        <div id="dailydraw-history-area" class="hidden flex-1 flex flex-col w-full max-w-md mx-auto py-4 gap-4">
+            <div class="flex gap-2 justify-center">
+                <button id="dailydraw-sub-calendar" onclick="switchDailyDrawHistoryTab('calendar')" class="draw-count-btn active">📅 日历</button>
+                <button id="dailydraw-sub-list" onclick="switchDailyDrawHistoryTab('list')" class="draw-count-btn">📋 列表</button>
+            </div>
+            <div id="dailydraw-calendar-view" class="flex flex-col gap-3">
+                <div class="flex items-center justify-between glass-item rounded-2xl px-3 py-2 shadow-sm">
+                    <button onclick="shiftDailyDrawMonth(-1)" class="draw-count-btn">‹ 上个月</button>
+                    <span id="dailydraw-calendar-title" class="text-sm font-bold text-slate-600"></span>
+                    <button onclick="shiftDailyDrawMonth(1)" class="draw-count-btn">下个月 ›</button>
+                </div>
+                <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-400 px-1">
+                    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                </div>
+                <div id="dailydraw-calendar-grid" class="grid grid-cols-7 gap-1"></div>
+                <div id="dailydraw-calendar-detail" class="flex flex-col gap-3"></div>
+            </div>
+            <div id="dailydraw-list-view" class="hidden flex flex-col gap-3"></div>
+        </div>
+    </div>
+
+    <!-- 每日一抽：手动录入实体牌弹窗 -->
+    <div id="manual-draw-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 w-full max-w-sm shadow-2xl relative border border-white">
+            <button onclick="closeManualDrawModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">✖</button>
+            <h2 class="text-lg font-bold text-slate-800 mb-4 text-center">✏️ 录入实体牌</h2>
+            <input id="manual-draw-name" type="text" maxlength="20" placeholder="输入牌名，如：战车" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 mb-4">
+            <div class="flex gap-2 justify-center mb-5">
+                <button class="draw-count-btn manual-orient-btn active" data-orient="upright" onclick="setManualOrientation('upright')">正位</button>
+                <button class="draw-count-btn manual-orient-btn" data-orient="reversed" onclick="setManualOrientation('reversed')">逆位</button>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeManualDrawModal()" class="flex-1 btn-hover glass-item text-slate-600 py-3 rounded-xl font-bold text-sm shadow-sm">取消</button>
+                <button onclick="confirmManualDraw()" class="flex-1 btn-hover bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm shadow-md border border-indigo-400">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 每日一抽：编辑历史记录弹窗 -->
+    <div id="dailydraw-edit-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 w-full max-w-sm shadow-2xl relative border border-white">
+            <button onclick="closeDailyDrawEditModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">✖</button>
+            <h2 class="text-lg font-bold text-slate-800 mb-4 text-center">✏️ 编辑记录</h2>
+            <p id="dailydraw-edit-card" class="text-center text-sm font-bold text-indigo-500 mb-4"></p>
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="text-xs font-bold text-slate-500">记录给</span>
+                <div class="flex gap-2">
+                    <button class="draw-count-btn dailydraw-edit-target-btn" data-label="今天" onclick="setDailyDrawEditTarget('今天')">今天</button>
+                    <button class="draw-count-btn dailydraw-edit-target-btn" data-label="明天" onclick="setDailyDrawEditTarget('明天')">明天</button>
+                    <button class="draw-count-btn dailydraw-edit-target-btn" data-label="后天" onclick="setDailyDrawEditTarget('后天')">后天</button>
+                </div>
+            </div>
+            <textarea id="dailydraw-edit-note" rows="3" placeholder="此时没有感触也没关系，以后随时来补充~" class="w-full bg-white/70 border border-indigo-100 rounded-2xl p-3 text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none mb-3"></textarea>
+            <div class="flex gap-2 justify-center flex-wrap mb-5">
+                <button class="draw-count-btn dailydraw-edit-mood-btn" data-mood="touched" onclick="setDailyDrawEditMood('touched')">✨ 有感触</button>
+                <button class="draw-count-btn dailydraw-edit-mood-btn" data-mood="plain" onclick="setDailyDrawEditMood('plain')">😐 平平</button>
+                <button class="draw-count-btn dailydraw-edit-mood-btn" data-mood="pending" onclick="setDailyDrawEditMood('pending')">⏳ 待验证</button>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeDailyDrawEditModal()" class="flex-1 btn-hover glass-item text-slate-600 py-3 rounded-xl font-bold text-sm shadow-sm">取消</button>
+                <button onclick="saveDailyDrawEdit()" class="flex-1 btn-hover bg-amber-400 text-white py-3 rounded-xl font-bold text-sm shadow-md border border-amber-300">💾 保存修改</button>
+            </div>
         </div>
     </div>
 
@@ -643,7 +733,7 @@
     const APP_OWNED_KEYS = [
         'inspirationsV13', 'inspirationsV12', 'aiConfigV13', 'aiConfigV12',
         'vibeThemeV14', 'vibeThemeV13', 'syncConfigV14', 'syncConfigV13',
-        'customElementsV14', 'drawCollectionsV14',
+        'customElementsV14', 'drawCollectionsV14', 'dailyDrawsV14',
         'syncLocalChangedAtV14', '__syncPausedV14__'
     ];
     function clearAllData() {
@@ -1146,11 +1236,89 @@
         { id: 21, name: '世界', emoji: '🌍', upright: '圆满达成、完整合一、新的征程', reversed: '差临门一脚、未竟之事、画好句号' }
     ];
 
+    // 56 张小阿卡纳：紧凑格式 [牌面, 正位, 逆位]，展开后并入牌堆凑齐 78 张
+    const TAROT_MINOR_SUITS = [
+        { suit: '权杖', emoji: '🪄', ranks: [
+            ['一', '新机遇降临、行动火花', '拖延迟疑、方向未明'],
+            ['二', '规划未来、稳步前行', '犹豫不决、计划受阻'],
+            ['三', '远见初显、进展可期', '进展延迟、视野受限'],
+            ['四', '稳定欢庆、值得庆祝', '基础动荡、喜事推迟'],
+            ['五', '良性竞争、激发斗志', '无谓争执、避免内耗'],
+            ['六', '胜利在望、获得认可', '信心受挫、暂居人后'],
+            ['七', '坚守立场、迎难而上', '压力过大、疲于防守'],
+            ['八', '快速推进、好消息至', '进度停滞、沟通受阻'],
+            ['九', '坚韧不拔、最后冲刺', '精疲力竭、别硬撑'],
+            ['十', '责任在肩、学会分担', '负担过重、需要放手'],
+            ['侍从', '好奇探索、新的尝试', '三分钟热度、易分心'],
+            ['骑士', '冲劲十足、勇往直前', '冲动鲁莽、欲速不达'],
+            ['王后', '热情自信、魅力四射', '情绪化、信心不足'],
+            ['国王', '领导魄力、目标明确', '专断独行、急功近利']
+        ]},
+        { suit: '圣杯', emoji: '🍷', ranks: [
+            ['一', '情感涌动、新的开始', '情感封闭、内心空虚'],
+            ['二', '心意相通、良缘将至', '关系失衡、误会渐生'],
+            ['三', '好友相聚、分享喜悦', '热闹过后的空虚'],
+            ['四', '倦怠沉思、别错失机会', '走出低迷、重拾动力'],
+            ['五', '为失去伤怀、珍惜拥有', '走出悲伤、接受现实'],
+            ['六', '怀旧温情、故人重逢', '沉溺过去、难以向前'],
+            ['七', '选择众多、需辨真伪', '幻想破灭、看清现实'],
+            ['八', '转身离开、追寻深处', '害怕改变、停滞不前'],
+            ['九', '心愿达成、满足惬意', '贪求过多、难得满足'],
+            ['十', '家庭和睦、幸福美满', '家人失和、期望落空'],
+            ['侍从', '情感萌芽、浪漫消息', '敏感多疑、情绪起伏'],
+            ['骑士', '浪漫追求、诚意满满', '空想不切实际'],
+            ['王后', '温柔共情、直觉敏锐', '情绪淹没、过度付出'],
+            ['国王', '情绪成熟、稳如磐石', '压抑情感、忽冷忽热']
+        ]},
+        { suit: '宝剑', emoji: '⚔️', ranks: [
+            ['一', '思路清晰、真相浮现', '思维混乱、判断失误'],
+            ['二', '两难抉择、需要决断', '信息过载、难以权衡'],
+            ['三', '心痛难免、直面真相', '疗愈开始、释怀过往'],
+            ['四', '休养生息、静观其变', '恢复元气、重新出发'],
+            ['五', '惨胜如败、退一步好', '放下输赢、握手言和'],
+            ['六', '渡过难关、渐入平静', '旧事缠身、难以抽身'],
+            ['七', '策略行事、以智取胜', '弄巧成拙、坦诚为上'],
+            ['八', '自我设限、其实有路', '打破束缚、重掌主动'],
+            ['九', '焦虑多想、放宽心睡', '阴霾渐散、卸下忧虑'],
+            ['十', '触底反弹、结束即开始', '最坏已过、缓慢复苏'],
+            ['侍从', '思维敏捷、消息灵通', '言多必失、信息失真'],
+            ['骑士', '雷厉风行、直击要害', '言语锋利、易伤他人'],
+            ['王后', '理性通透、一针见血', '过于苛刻、冷漠疏离'],
+            ['国王', '公正果断、权威判断', '固执己见、强势压人']
+        ]},
+        { suit: '星币', emoji: '🪙', ranks: [
+            ['一', '财运新启、踏实起步', '机会流失、计划不周'],
+            ['二', '灵活平衡、多线并行', '顾此失彼、精力透支'],
+            ['三', '协作共赢、技艺精进', '配合不畅、标准不一'],
+            ['四', '守成稳定、量入为出', '过度紧抓、学会放手'],
+            ['五', '暂时拮据、援助在旁', '困境渐解、转机出现'],
+            ['六', '慷慨给予、善有善报', '施受失衡、量力而行'],
+            ['七', '耐心耕耘、收获在望', '回报甚微、重新评估'],
+            ['八', '专注打磨、精益求精', '敷衍了事、缺乏热情'],
+            ['九', '自给自足、享受成果', '过度消费、财务吃紧'],
+            ['十', '家业丰厚、长久安稳', '家宅不宁、财务波动'],
+            ['侍从', '踏实学习、技能上手', '好高骛远、基础不牢'],
+            ['骑士', '稳扎稳打、靠谱推进', '过于保守、进展缓慢'],
+            ['王后', '务实持家、温润丰足', '操劳过度、忽略自己'],
+            ['国王', '事业有成、财富稳固', '重利轻义、财务冒险']
+        ]}
+    ];
+    TAROT_MINOR_SUITS.forEach((suit, suitIndex) => {
+        suit.ranks.forEach((rank, rankIndex) => {
+            TAROT_DECK.push({ id: 22 + suitIndex * 14 + rankIndex, name: suit.suit + rank[0], emoji: suit.emoji, upright: rank[1], reversed: rank[2] });
+        });
+    });
+
     function drawDailyCard() {
         const btn = document.getElementById('dailydraw-btn');
         if (btn.disabled) return;
+        const unsavedNote = document.getElementById('dailydraw-note');
+        if (unsavedNote && unsavedNote.value.trim() && !confirm('当前感悟还没保存，确定要重新抽牌吗？')) return;
         btn.disabled = true;
         const inner = document.getElementById('tarot-card-inner');
+        const drawSeq = ++dailyDrawSeq;
+        hideDailyDrawPanel();
+        resetDailyDrawPanel();
         const revealCard = () => {
             const card = TAROT_DECK[Math.floor(Math.random() * TAROT_DECK.length)];
             const isReversed = Math.random() < 0.5;
@@ -1163,6 +1331,11 @@
             orientEl.className = isReversed ? 'tarot-orient reversed' : 'tarot-orient upright';
             document.getElementById('tarot-meaning').innerText = isReversed ? card.reversed : card.upright;
             inner.classList.add('flipped');
+            setTimeout(() => {
+                if (drawSeq !== dailyDrawSeq) return;
+                createDailyDrawRecord(card.name, isReversed);
+                showDailyDrawPanel();
+            }, 1200);
             btn.innerText = '🔮 重新抽牌';
             setTimeout(() => { btn.disabled = false; }, 1300);
         };
@@ -1172,6 +1345,342 @@
         } else {
             revealCard();
         }
+    }
+
+    // --- 每日一抽：抽牌记录保存 + 手动录入实体牌 ---
+    let dailyDraws = JSON.parse(localStorage.getItem('dailyDrawsV14')) || [];
+    let currentDrawId = null;
+    let dailyDrawTargetLabel = '今天';
+    let dailyDrawMood = '';
+    let dailyDrawSeq = 0;
+    let manualDrawOrientation = 'upright';
+
+    function formatDailyDrawDate(date) {
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${date.getFullYear()}-${month}-${day}`;
+    }
+
+    function resetDailyDrawPanel() {
+        dailyDrawTargetLabel = '今天';
+        dailyDrawMood = '';
+        document.querySelectorAll('.dailydraw-target-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.label === '今天'));
+        document.querySelectorAll('.dailydraw-mood-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('dailydraw-note').value = '';
+        const saveBtn = document.getElementById('dailydraw-save-btn');
+        saveBtn.disabled = false;
+        saveBtn.innerText = '📝 保存感悟';
+        saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function showDailyDrawPanel() {
+        const panel = document.getElementById('dailydraw-record-panel');
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+    }
+
+    function hideDailyDrawPanel() {
+        const panel = document.getElementById('dailydraw-record-panel');
+        panel.classList.add('hidden');
+        panel.classList.remove('flex');
+    }
+
+    function persistDailyDraws() {
+        localStorage.setItem('dailyDrawsV14', JSON.stringify(dailyDraws));
+        markLocalChanged();
+        scheduleSyncPush();
+    }
+
+    function createDailyDrawRecord(name, isReversed) {
+        const record = {
+            id: Date.now(),
+            draw_date: formatDailyDrawDate(new Date()),
+            target_date: dailyDrawTargetLabel,
+            card_name: name,
+            orientation: isReversed ? '逆位' : '正位',
+            note: '',
+            mood: '',
+            created_at: Date.now()
+        };
+        dailyDraws.push(record);
+        persistDailyDraws();
+        currentDrawId = record.id;
+        return record;
+    }
+
+    function updateCurrentDrawRecord(fields) {
+        if (!currentDrawId) return;
+        const record = dailyDraws.find(item => item.id === currentDrawId);
+        if (!record) return;
+        Object.assign(record, fields);
+        persistDailyDraws();
+    }
+
+    // 历史回看预留：note 为空的记录统一提示『等待补充感悟』
+    function dailyDrawNoteLabel(record) {
+        return record && record.note && record.note.trim() ? record.note : '等待补充感悟';
+    }
+
+    function setDailyDrawTarget(label) {
+        dailyDrawTargetLabel = label;
+        document.querySelectorAll('.dailydraw-target-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.label === label));
+        updateCurrentDrawRecord({ target_date: label });
+    }
+
+    function setDailyDrawMood(mood) {
+        dailyDrawMood = mood;
+        document.querySelectorAll('.dailydraw-mood-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mood === mood));
+    }
+
+    function saveDailyDrawRecord() {
+        if (!currentDrawId) return;
+        const noteEl = document.getElementById('dailydraw-note');
+        const note = noteEl.value.trim();
+        updateCurrentDrawRecord({ note: note, mood: dailyDrawMood });
+        showToast('✅ 感悟已保存');
+        noteEl.value = '';
+        const saveBtn = document.getElementById('dailydraw-save-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerText = '✅ 已保存';
+        saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function onDailyDrawNoteInput() {
+        const saveBtn = document.getElementById('dailydraw-save-btn');
+        if (!saveBtn.disabled) return;
+        saveBtn.disabled = false;
+        saveBtn.innerText = '📝 保存感悟';
+        saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function openManualDrawModal() {
+        document.getElementById('manual-draw-name').value = '';
+        setManualOrientation('upright');
+        const modal = document.getElementById('manual-draw-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => document.getElementById('manual-draw-name').focus(), 60);
+    }
+
+    function closeManualDrawModal() {
+        const modal = document.getElementById('manual-draw-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function setManualOrientation(orient) {
+        manualDrawOrientation = orient;
+        document.querySelectorAll('.manual-orient-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.orient === orient));
+    }
+
+    function confirmManualDraw() {
+        const name = document.getElementById('manual-draw-name').value.trim();
+        if (!name) { showToast('先输入牌名'); return; }
+        const isReversed = manualDrawOrientation === 'reversed';
+        const known = TAROT_DECK.find(card => card.name === name);
+        document.getElementById('tarot-name').innerText = name;
+        const emojiEl = document.getElementById('tarot-emoji');
+        emojiEl.innerText = known ? known.emoji : '🃏';
+        emojiEl.classList.toggle('reversed', isReversed);
+        const orientEl = document.getElementById('tarot-orient');
+        orientEl.innerText = isReversed ? '逆位' : '正位';
+        orientEl.className = isReversed ? 'tarot-orient reversed' : 'tarot-orient upright';
+        document.getElementById('tarot-meaning').innerText = known ? (isReversed ? known.reversed : known.upright) : '自定义牌面，含义由你定义';
+        const inner = document.getElementById('tarot-card-inner');
+        inner.style.transition = 'none';
+        inner.classList.add('flipped');
+        void inner.offsetHeight;
+        inner.style.transition = '';
+        dailyDrawSeq++;
+        resetDailyDrawPanel();
+        createDailyDrawRecord(name, isReversed);
+        showDailyDrawPanel();
+        closeManualDrawModal();
+        document.getElementById('dailydraw-btn').innerText = '🔮 重新抽牌';
+    }
+
+    // --- 每日一抽：历史回看（日历 + 列表） ---
+    const DAILY_DRAW_MOOD_EMOJI = { touched: '✨ 有感触', plain: '😐 平平', pending: '⏳ 待验证' };
+    let dailyDrawView = 'draw';
+    let dailyDrawHistoryTab = 'calendar';
+    let dailyDrawCalendarCursor = null;
+    let dailyDrawSelectedDate = null;
+
+    function getDailyDrawCardEmoji(record) {
+        const known = TAROT_DECK.find(card => card.name === (record && record.card_name));
+        return known ? known.emoji : '🃏';
+    }
+
+    function switchDailyDrawTab(tab) {
+        dailyDrawView = tab;
+        document.getElementById('dailydraw-tab-draw').classList.toggle('active', tab === 'draw');
+        document.getElementById('dailydraw-tab-history').classList.toggle('active', tab === 'history');
+        document.getElementById('dailydraw-draw-area').classList.toggle('hidden', tab !== 'draw');
+        document.getElementById('dailydraw-history-area').classList.toggle('hidden', tab !== 'history');
+        if (tab === 'history') {
+            dailyDrawCalendarCursor = null;
+            dailyDrawSelectedDate = null;
+            renderDailyDrawHistory();
+        }
+    }
+
+    function switchDailyDrawHistoryTab(tab) {
+        dailyDrawHistoryTab = tab;
+        document.getElementById('dailydraw-sub-calendar').classList.toggle('active', tab === 'calendar');
+        document.getElementById('dailydraw-sub-list').classList.toggle('active', tab === 'list');
+        document.getElementById('dailydraw-calendar-view').classList.toggle('hidden', tab !== 'calendar');
+        document.getElementById('dailydraw-list-view').classList.toggle('hidden', tab !== 'list');
+        renderDailyDrawHistory();
+    }
+
+    function renderDailyDrawHistory() {
+        if (dailyDrawHistoryTab === 'calendar') renderDailyDrawCalendar();
+        else renderDailyDrawList();
+    }
+
+    function getDailyDrawsByDate() {
+        const byDate = {};
+        dailyDraws.forEach(record => {
+            if (!record || !record.draw_date) return;
+            (byDate[record.draw_date] = byDate[record.draw_date] || []).push(record);
+        });
+        return byDate;
+    }
+
+    function resetDailyDrawCalendarCursor() {
+        const now = new Date();
+        dailyDrawCalendarCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    function shiftDailyDrawMonth(offset) {
+        if (!dailyDrawCalendarCursor) resetDailyDrawCalendarCursor();
+        dailyDrawCalendarCursor = new Date(dailyDrawCalendarCursor.getFullYear(), dailyDrawCalendarCursor.getMonth() + offset, 1);
+        dailyDrawSelectedDate = null;
+        renderDailyDrawCalendar();
+    }
+
+    function selectDailyDrawDate(dateStr) {
+        dailyDrawSelectedDate = dailyDrawSelectedDate === dateStr ? null : dateStr;
+        renderDailyDrawCalendar();
+    }
+
+    function renderDailyDrawCalendar() {
+        if (!dailyDrawCalendarCursor) resetDailyDrawCalendarCursor();
+        const year = dailyDrawCalendarCursor.getFullYear();
+        const month = dailyDrawCalendarCursor.getMonth();
+        document.getElementById('dailydraw-calendar-title').innerText = `${year} 年 ${month + 1} 月`;
+        const byDate = getDailyDrawsByDate();
+        const firstWeekday = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const cells = [];
+        for (let i = 0; i < firstWeekday; i++) cells.push('<span></span>');
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayRecords = byDate[dateStr];
+            if (dayRecords && dayRecords.length) {
+                const selected = dateStr === dailyDrawSelectedDate ? ' selected' : '';
+                const extra = dayRecords.length > 1 ? `<span class="text-[9px] font-bold text-indigo-400" style="line-height:1;">×${dayRecords.length}</span>` : '';
+                cells.push(`<button onclick="selectDailyDrawDate('${dateStr}')" class="dailydraw-cal-cell${selected}"><span>${day}</span><span class="dailydraw-cal-emoji">${getDailyDrawCardEmoji(dayRecords[0])}</span>${extra}</button>`);
+            } else {
+                cells.push(`<span class="dailydraw-cal-cell" style="opacity:0.45;"><span>${day}</span></span>`);
+            }
+        }
+        document.getElementById('dailydraw-calendar-grid').innerHTML = cells.join('');
+        renderDailyDrawCalendarDetail(byDate);
+    }
+
+    function renderDailyDrawCalendarDetail(byDate) {
+        const container = document.getElementById('dailydraw-calendar-detail');
+        if (!dailyDrawSelectedDate) {
+            container.innerHTML = '<p class="text-center text-xs font-bold text-slate-400 py-2">点击带牌面的日期查看当天记录</p>';
+            return;
+        }
+        const records = byDate[dailyDrawSelectedDate] || [];
+        if (!records.length) {
+            container.innerHTML = '<p class="text-center text-xs font-bold text-slate-400 py-2">这一天没有记录</p>';
+            return;
+        }
+        container.innerHTML = records.map(record => renderDailyDrawRecordCard(record, true)).join('');
+    }
+
+    function renderDailyDrawRecordCard(record, showTarget) {
+        const mood = DAILY_DRAW_MOOD_EMOJI[record.mood] || '';
+        const note = escapeDrawText(dailyDrawNoteLabel(record));
+        const targetLine = showTarget ? `<span class="text-xs font-bold text-indigo-400">记录给：${escapeDrawText(record.target_date || '今天')}</span>` : '';
+        return `<div class="glass-item rounded-2xl p-4 flex flex-col gap-1.5 shadow-sm"><div class="flex items-center justify-between gap-2"><span class="text-sm font-bold text-slate-700">${getDailyDrawCardEmoji(record)} ${escapeDrawText(record.card_name)} · ${escapeDrawText(record.orientation || '')}</span>${mood ? `<span class="text-xs font-bold text-slate-500 whitespace-nowrap">${mood}</span>` : ''}</div><div class="flex items-center justify-between gap-2"><span class="text-xs font-bold text-slate-400">${escapeDrawText(record.draw_date || '')}</span>${targetLine}</div><p class="text-sm text-slate-600 font-medium leading-relaxed">${note}</p><div class="flex gap-2 justify-end mt-1"><button onclick="openDailyDrawEditModal(${record.id})" class="btn-hover glass-item text-indigo-500 text-xs font-bold px-3 py-1 rounded-lg shadow-sm">✏️ 编辑</button><button onclick="deleteDailyDrawRecord(${record.id})" class="btn-hover bg-white/60 text-rose-500 border border-rose-200 text-xs font-bold px-3 py-1 rounded-lg shadow-sm">🗑️ 删除</button></div></div>`;
+    }
+
+    function renderDailyDrawList() {
+        const container = document.getElementById('dailydraw-list-view');
+        const sorted = [...dailyDraws].sort((a, b) => (Number(b.created_at) || 0) - (Number(a.created_at) || 0));
+        if (!sorted.length) {
+            container.innerHTML = '<p class="text-center text-sm font-bold text-slate-400 py-10">还没有抽牌记录</p>';
+            return;
+        }
+        container.innerHTML = sorted.map(record => {
+            const noteChars = [...dailyDrawNoteLabel(record)];
+            const short = noteChars.length > 40 ? escapeDrawText(noteChars.slice(0, 40).join('')) + '…' : escapeDrawText(noteChars.join(''));
+            return `<div class="glass-item rounded-2xl p-4 flex flex-col gap-1 shadow-sm"><div class="flex items-center justify-between gap-2"><span class="text-sm font-bold text-slate-700">${getDailyDrawCardEmoji(record)} ${escapeDrawText(record.card_name)} · ${escapeDrawText(record.orientation || '')}</span><span class="text-xs font-bold text-slate-400 whitespace-nowrap">${escapeDrawText(record.draw_date || '')}</span></div><p class="text-xs text-slate-500 font-medium">${short}</p><div class="flex gap-2 justify-end mt-1"><button onclick="openDailyDrawEditModal(${record.id})" class="btn-hover glass-item text-indigo-500 text-xs font-bold px-3 py-1 rounded-lg shadow-sm">✏️ 编辑</button><button onclick="deleteDailyDrawRecord(${record.id})" class="btn-hover bg-white/60 text-rose-500 border border-rose-200 text-xs font-bold px-3 py-1 rounded-lg shadow-sm">🗑️ 删除</button></div></div>`;
+        }).join('');
+    }
+
+    // --- 每日一抽：历史记录编辑 / 删除 ---
+    let editingDailyDrawId = null;
+    let dailyDrawEditTargetLabel = '今天';
+    let dailyDrawEditMood = '';
+
+    function openDailyDrawEditModal(id) {
+        const record = dailyDraws.find(item => item.id === id);
+        if (!record) return;
+        editingDailyDrawId = id;
+        dailyDrawEditTargetLabel = record.target_date || '今天';
+        dailyDrawEditMood = record.mood || '';
+        document.getElementById('dailydraw-edit-card').innerText = getDailyDrawCardEmoji(record) + ' ' + (record.card_name || '') + ' · ' + (record.orientation || '');
+        document.querySelectorAll('.dailydraw-edit-target-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.label === dailyDrawEditTargetLabel));
+        document.querySelectorAll('.dailydraw-edit-mood-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mood === dailyDrawEditMood));
+        document.getElementById('dailydraw-edit-note').value = record.note || '';
+        const modal = document.getElementById('dailydraw-edit-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeDailyDrawEditModal() {
+        const modal = document.getElementById('dailydraw-edit-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        editingDailyDrawId = null;
+    }
+
+    function setDailyDrawEditTarget(label) {
+        dailyDrawEditTargetLabel = label;
+        document.querySelectorAll('.dailydraw-edit-target-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.label === label));
+    }
+
+    function setDailyDrawEditMood(mood) {
+        dailyDrawEditMood = mood;
+        document.querySelectorAll('.dailydraw-edit-mood-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mood === mood));
+    }
+
+    function saveDailyDrawEdit() {
+        if (!editingDailyDrawId) return;
+        const record = dailyDraws.find(item => item.id === editingDailyDrawId);
+        if (!record) { closeDailyDrawEditModal(); return; }
+        record.note = document.getElementById('dailydraw-edit-note').value.trim();
+        record.mood = dailyDrawEditMood;
+        record.target_date = dailyDrawEditTargetLabel;
+        persistDailyDraws();
+        closeDailyDrawEditModal();
+        renderDailyDrawHistory();
+        showToast('✅ 修改已保存');
+    }
+
+    function deleteDailyDrawRecord(id) {
+        if (!confirm('确定要删除这条记录吗？')) return;
+        dailyDraws = dailyDraws.filter(item => item.id !== id);
+        if (currentDrawId === id) currentDrawId = null;
+        persistDailyDraws();
+        renderDailyDrawHistory();
+        showToast('🗑️ 已删除');
     }
 
     // --- 彻底解决音频兼容 ---
