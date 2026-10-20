@@ -241,6 +241,30 @@
             </div>
         </div>
 
+        <div class="max-w-2xl mx-auto w-full mb-6">
+            <div id="stats-card" class="glass-card p-5 border border-white/50">
+                <div class="text-base font-bold mb-4 flex items-center gap-2">📊 数据统计</div>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="text-center">
+                        <div id="stats-total-inspirations" class="text-3xl font-bold cute-font drop-shadow-sm" style="color: var(--theme-primary);">0</div>
+                        <div class="text-xs font-bold mt-1 opacity-70">累计灵感</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="stats-total-completed" class="text-3xl font-bold cute-font drop-shadow-sm" style="color: var(--theme-primary);">0</div>
+                        <div class="text-xs font-bold mt-1 opacity-70">完成任务</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="stats-streak-days" class="text-3xl font-bold cute-font drop-shadow-sm" style="color: var(--theme-primary);">0</div>
+                        <div class="text-xs font-bold mt-1 opacity-70">连续打卡</div>
+                    </div>
+                </div>
+                <div class="pt-3" style="border-top: 1px solid var(--theme-border);">
+                    <div class="text-xs font-bold opacity-70 mb-2">本周活跃度</div>
+                    <div id="stats-week-grid" class="flex gap-1.5"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="max-w-2xl mx-auto w-full mb-8">
             <div class="grid grid-cols-4 gap-3 mb-4">
                 <button onclick="openInputModal('💡 灵感点子')" class="btn-hover glass-item py-4 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border-orange-100"><span class="text-3xl drop-shadow-sm">💡</span><span class="text-xs font-bold text-orange-600">灵感</span></button>
@@ -1179,6 +1203,7 @@
         document.getElementById('music-title-pc').innerText = currentRadio.title; document.getElementById('music-artist-pc').innerText = currentRadio.artist;
         document.getElementById('music-title-mobile').innerText = currentRadio.title; document.getElementById('music-artist-mobile').innerText = currentRadio.artist;
         if (localStorage.getItem('__syncPausedV14__') !== 'true' && isSyncConfigured()) sync.pull({ silent: true }).catch(error => console.error('启动云端检查失败:', error));
+        renderStats();
     }
 
     function switchTab(tabId) {
@@ -1389,6 +1414,7 @@
         localStorage.setItem('dailyDrawsV14', JSON.stringify(dailyDraws));
         markLocalChanged();
         scheduleSyncPush();
+        renderStats();
     }
 
     function createDailyDrawRecord(name, isReversed) {
@@ -1710,7 +1736,7 @@
         }
     }
 
-    function saveData() { localStorage.setItem('inspirationsV13', JSON.stringify(inspirations)); markLocalChanged(); scheduleSyncPush(); if(document.getElementById('view-home').classList.contains('active')) renderHome(); updateJarWater(); if(document.getElementById('view-archive').classList.contains('active')) renderArchive(); }
+    function saveData() { localStorage.setItem('inspirationsV13', JSON.stringify(inspirations)); markLocalChanged(); scheduleSyncPush(); if(document.getElementById('view-home').classList.contains('active')) renderHome(); updateJarWater(); if(document.getElementById('view-archive').classList.contains('active')) renderArchive(); renderStats(); }
 
     function renderHome() {
         const pendingList = inspirations.filter(i => i.status === 'pending'); document.getElementById('pending-count-text').innerText = `${pendingList.length} 个`;
@@ -1738,6 +1764,46 @@
         });
     }
     
+    // 批次5：数据统计面板 —— 计算累计灵感 / 完成任务 / 连续打卡 / 本周活跃度
+    function calculateStats() {
+        const dayKey = ts => { const d = new Date(Number(ts) || 0); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); };
+        const totalInspirations = inspirations.filter(item => (item.tag || '').includes('灵感')).length;
+        const totalCompleted = inspirations.filter(item => item.status === 'completed').length;
+        const recordDays = new Set();
+        inspirations.forEach(item => { if (item.created_at) recordDays.add(dayKey(item.created_at)); });
+        dailyDraws.forEach(record => { if (record.created_at) recordDays.add(dayKey(record.created_at)); });
+
+        let streak = 0;
+        const cursor = new Date(); cursor.setHours(0, 0, 0, 0);
+        if (!recordDays.has(dayKey(cursor.getTime()))) cursor.setDate(cursor.getDate() - 1);
+        while (recordDays.has(dayKey(cursor.getTime()))) { streak++; cursor.setDate(cursor.getDate() - 1); }
+
+        const monday = new Date(); monday.setHours(0, 0, 0, 0);
+        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+        const todayKey = dayKey(Date.now());
+        const week = [];
+        for (let offset = 0; offset < 7; offset++) {
+            const day = new Date(monday); day.setDate(day.getDate() + offset);
+            const key = dayKey(day.getTime());
+            week.push({ active: recordDays.has(key), isToday: key === todayKey });
+        }
+        return { totalInspirations, totalCompleted, streak, week };
+    }
+
+    function renderStats() {
+        if (!document.getElementById('stats-card')) return;
+        const stats = calculateStats();
+        document.getElementById('stats-total-inspirations').innerText = stats.totalInspirations;
+        document.getElementById('stats-total-completed').innerText = stats.totalCompleted;
+        document.getElementById('stats-streak-days').innerText = stats.streak;
+        const weekLabels = ['一', '二', '三', '四', '五', '六', '日'];
+        document.getElementById('stats-week-grid').innerHTML = stats.week.map((day, idx) => {
+            const fillStyle = day.active ? 'background: var(--theme-primary); color: #fff; box-shadow: var(--theme-shadow);' : 'border: 1px dashed var(--theme-border); color: var(--theme-text); opacity: 0.5;';
+            const todayRing = day.isToday ? ' outline: 2px solid var(--theme-primary); outline-offset: 2px; opacity: 1;' : '';
+            return '<div class="flex-1 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition-all" style="' + fillStyle + todayRing + '">' + weekLabels[idx] + '</div>';
+        }).join('');
+    }
+
     function deleteItem(id) { if(confirm("确定丢弃这个碎片吗？")) { inspirations = inspirations.filter(i => i.id !== id); saveData(); } }
 
     function editItem(id) {
